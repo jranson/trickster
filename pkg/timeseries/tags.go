@@ -22,24 +22,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/tricksterproxy/trickster/pkg/util/fnv"
 )
 
-type Hash uint64
+// Tags is a key/value pair associated with a Series to scope the cardinality of the DataSet
 type Tags map[string]string
 
-// Hash returns a hash of tag key/value pairs.
-func (t Tags) Hash() Hash {
-	h := fnv.NewInlineFNV64a()
-	keys := t.Keys()
-	for _, k := range keys {
-		h.Write([]byte(k))
-		h.Write([]byte(t[k]))
-	}
-	return Hash(h.Sum64())
-}
-
+// String returns a string representation of the Tags
 func (t Tags) String() string {
 	if len(t) == 0 {
 		return ""
@@ -54,6 +42,7 @@ func (t Tags) String() string {
 	return strings.Join(pairs, ";")
 }
 
+// Keys returns a string-sorted list of the Tags's keys
 func (t Tags) Keys() []string {
 	if len(t) == 0 {
 		return nil
@@ -66,4 +55,22 @@ func (t Tags) Keys() []string {
 	}
 	sort.Sort(keys)
 	return keys
+}
+
+// Size returns the byte size of the Tags
+func (t Tags) Size() int {
+	var s int
+	for k := range t {
+		s += (len(k) + len(t[k]))
+	}
+	return s
+}
+
+// Clone returns an exact copy of the Tags
+func (t Tags) Clone() Tags {
+	clone := make(Tags)
+	for k := range t {
+		clone[k] = t[k]
+	}
+	return clone
 }

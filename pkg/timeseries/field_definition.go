@@ -26,9 +26,20 @@ const (
 	Int16
 )
 
+// FieldDataType is a byte representing the data type of a Field
+// when stored in a Point's Values list
 type FieldDataType byte
 
+// FieldDefinition describes a field by name and type
 type FieldDefinition struct {
 	Name     string
 	DataType FieldDataType
+}
+
+// Clone returns a perfect, new copy of the FieldDefinition
+func (fd *FieldDefinition) Clone() *FieldDefinition {
+	return &FieldDefinition{
+		Name:     fd.Name,
+		DataType: fd.DataType,
+	}
 }
