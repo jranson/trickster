@@ -52,7 +52,7 @@ func marshalTimeseriesRaw(ds *timeseries.DataSet) ([]byte, error) {
 		sb.WriteString(s.Header.Name + "," +
 			strconv.FormatInt(ds.ExtentList[0].Start.Unix(), 10) + "," +
 			strconv.FormatInt(ds.ExtentList[0].End.Unix(), 10) + "," +
-			strconv.Itoa(int(ds.StepDuration.Seconds())) + "|")
+			strconv.Itoa(int(ds.Step().Seconds())) + "|")
 		sep := ","
 		for i, v := range s.Points {
 			if i == len(s.Points)-1 {
@@ -148,13 +148,14 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 			if start == 0 {
 				ds.UpdateLock.Lock()
 				if start == 0 {
-					ds.StepDuration = time.Second * time.Duration(step)
-					ds.ExtentList = timeseries.ExtentList{
-						timeseries.Extent{
-							Start: time.Unix(s, 0),
-							End:   time.Unix(n, 0),
-						},
+					extent := timeseries.Extent{
+						Start: time.Unix(s, 0),
+						End:   time.Unix(n, 0),
 					}
+					ds.TimeRangeQuery = &timeseries.TimeRangeQuery{
+						Step: time.Second * time.Duration(step),
+					}
+					ds.ExtentList = timeseries.ExtentList{extent}
 					start = s
 					end = n
 					step = p
@@ -214,6 +215,10 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 				Points: points,
 			}
 			sl[k] = series
+			// TODO: Properly populate serieslookup
+			if r.SeriesLookup == nil {
+				r.SeriesLookup = make(timeseries.SeriesLookup)
+			}
 			r.SeriesLookup[sh.Hash] = series
 		}(line, i)
 	}

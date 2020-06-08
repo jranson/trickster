@@ -33,9 +33,10 @@ import (
 // SeriesEnvelope values represent a time series data response from the
 // IRONdb API.
 type SeriesEnvelope struct {
-	Data         DataPoints            `json:"data"`
-	ExtentList   timeseries.ExtentList `json:"extents,omitempty"`
-	StepDuration time.Duration         `json:"step,omitempty"`
+	Data           DataPoints            `json:"data"`
+	ExtentList     timeseries.ExtentList `json:"extents,omitempty"`
+	StepDuration   time.Duration         `json:"step,omitempty"`
+	timeRangeQuery *timeseries.TimeRangeQuery
 }
 
 // MarshalJSON encodes a series envelope value into a JSON byte slice.
@@ -173,9 +174,13 @@ func (se *SeriesEnvelope) Step() time.Duration {
 	return se.StepDuration
 }
 
-// SetStep sets the step for the Timeseries.
-func (se *SeriesEnvelope) SetStep(step time.Duration) {
-	se.StepDuration = step
+// SetTimeRangeQuery sets the trq for the Timeseries.
+func (se *SeriesEnvelope) SetTimeRangeQuery(trq *timeseries.TimeRangeQuery) {
+	if trq == nil {
+		return
+	}
+	se.StepDuration = trq.Step
+	se.timeRangeQuery = trq
 }
 
 // SetExtents overwrites a Timeseries's known extents with the provided extent

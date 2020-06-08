@@ -27,12 +27,13 @@ import (
 // DF4SeriesEnvelope values represent DF4 format time series data from the
 // IRONdb API.
 type DF4SeriesEnvelope struct {
-	Data         [][]interface{}          `json:"data"`
-	Meta         []map[string]interface{} `json:"meta,omitempty"`
-	Ver          string                   `json:"version,omitempty"`
-	Head         DF4Info                  `json:"head"`
-	StepDuration time.Duration            `json:"step,omitempty"`
-	ExtentList   timeseries.ExtentList    `json:"extents,omitempty"`
+	Data           [][]interface{}          `json:"data"`
+	Meta           []map[string]interface{} `json:"meta,omitempty"`
+	Ver            string                   `json:"version,omitempty"`
+	Head           DF4Info                  `json:"head"`
+	StepDuration   time.Duration            `json:"step,omitempty"`
+	ExtentList     timeseries.ExtentList    `json:"extents,omitempty"`
+	timeRangeQuery *timeseries.TimeRangeQuery
 }
 
 // DF4Info values contain information about the timestamps of the data elements
@@ -48,9 +49,13 @@ func (se *DF4SeriesEnvelope) Step() time.Duration {
 	return se.StepDuration
 }
 
-// SetStep sets the step for the Timeseries.
-func (se *DF4SeriesEnvelope) SetStep(step time.Duration) {
-	se.StepDuration = step
+// SetTimeRangeQuery sets the trq for the Timeseries.
+func (se *DF4SeriesEnvelope) SetTimeRangeQuery(trq *timeseries.TimeRangeQuery) {
+	if trq == nil {
+		return
+	}
+	se.StepDuration = trq.Step
+	se.timeRangeQuery = trq
 }
 
 // Extents returns the Timeseries's extent list.

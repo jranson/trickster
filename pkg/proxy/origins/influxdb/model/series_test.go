@@ -115,21 +115,13 @@ func TestClone(t *testing.T) {
 
 }
 
-func TestSetStep(t *testing.T) {
+func TestSetTimeRangeQuery(t *testing.T) {
 	se := SeriesEnvelope{}
 	const step = time.Duration(300) * time.Minute
-	se.SetStep(step)
-	if se.StepDuration != step {
-		t.Errorf(`expected "%s". got "%s"`, step, se.StepDuration)
-	}
-}
-
-func TestStep(t *testing.T) {
-	se := SeriesEnvelope{}
-	const step = time.Duration(300) * time.Minute
-	se.SetStep(step)
+	trq := &timeseries.TimeRangeQuery{Step: step}
+	se.SetTimeRangeQuery(trq)
 	if se.Step() != step {
-		t.Errorf(`expected "%s". got "%s"`, step, se.Step())
+		t.Errorf(`expected "%s". got "%s"`, step, se.StepDuration)
 	}
 }
 

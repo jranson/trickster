@@ -28,9 +28,6 @@ import (
 type DataSet struct {
 	// Status is the optional status indicator for the DataSet
 	Status string
-	// StepDuration is the periodic interval of time between Point timestamps
-	// it's not called 'Step' because that is a conflicting interface function name
-	StepDuration time.Duration
 	// ExtentList is the list of Extents (time ranges) represented in the Results
 	ExtentList ExtentList
 	// PointsLookup is map allowing lookup of a Point by epoch and series hash
@@ -42,7 +39,8 @@ type DataSet struct {
 	UpdateLock sync.Mutex
 	// Error is a container for any DataSet-level Errors
 	Error error
-
+	// TimeRangeQuery is the trq associated with the Timeseries
+	TimeRangeQuery *TimeRangeQuery
 	// Sorter is the DataSet's Sort function, which defaults to DefaultSort
 	Sorter func()
 	// Merger is the DataSet's Merge function, which defaults to DefaultMerge
@@ -64,16 +62,16 @@ func (ds *DataSet) Clone() Timeseries {
 	ds.UpdateLock.Lock()
 	defer ds.UpdateLock.Unlock()
 	clone := &DataSet{
-		StepDuration: ds.StepDuration,
-		Error:        ds.Error,
-		Sorter:       ds.Sorter,
-		Merger:       ds.Merger,
-		SizeCropper:  ds.SizeCropper,
-		RangeCropper: ds.RangeCropper,
-		OutputFormat: ds.OutputFormat,
-		ExtentList:   make(ExtentList, len(ds.ExtentList)),
-		PointsLookup: make(PointsLookup),
-		Results:      make([]*Result, len(ds.Results)),
+		Error:          ds.Error,
+		Sorter:         ds.Sorter,
+		Merger:         ds.Merger,
+		SizeCropper:    ds.SizeCropper,
+		RangeCropper:   ds.RangeCropper,
+		OutputFormat:   ds.OutputFormat,
+		ExtentList:     make(ExtentList, len(ds.ExtentList)),
+		PointsLookup:   make(PointsLookup),
+		Results:        make([]*Result, len(ds.Results)),
+		TimeRangeQuery: ds.TimeRangeQuery.Clone(),
 	}
 	copy(clone.ExtentList, ds.ExtentList)
 	for i, r := range ds.Results {
@@ -201,7 +199,7 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 		}
 	}
 
-	ds.ExtentList = ds.ExtentList.Compress(ds.StepDuration)
+	ds.ExtentList = ds.ExtentList.Compress(ds.Step())
 
 	// other housekeeping
 	// e.g., if len(orderMarkers) > 0, we potentially got reordering to do.
@@ -271,11 +269,11 @@ func (ds *DataSet) DefaultRangeCropper(e Extent) {
 	var estDelCnt int
 	dsStartNS := Epoch(ds.ExtentList[0].Start.UnixNano())
 	if startNS > dsStartNS {
-		estDelCnt += int((startNS - dsStartNS) / Epoch(ds.StepDuration))
+		estDelCnt += int((startNS - dsStartNS) / Epoch(ds.Step()))
 	}
 	dsEndNS := Epoch(ds.ExtentList[len(ds.ExtentList)-1].End.UnixNano())
 	if endNS < dsEndNS {
-		estDelCnt += int((dsEndNS - endNS) / Epoch(ds.StepDuration))
+		estDelCnt += int((dsEndNS - endNS) / Epoch(ds.Step()))
 	}
 	delPoints := make(map[Epoch]bool)
 	for i, r := range ds.Results {
@@ -401,14 +399,17 @@ func (ds *DataSet) Size() int {
 	return c
 }
 
-// SetStep sets the step for the DataSet
-func (ds *DataSet) SetStep(d time.Duration) {
-	ds.StepDuration = d
+// SetTimeRangeQuery sets the TimeRangeQuery for the DataSet
+func (ds *DataSet) SetTimeRangeQuery(trq *TimeRangeQuery) {
+	ds.TimeRangeQuery = trq
 }
 
 // Step returns the step for the DataSet
 func (ds *DataSet) Step() time.Duration {
-	return ds.StepDuration
+	if ds.TimeRangeQuery != nil {
+		return ds.TimeRangeQuery.Step
+	}
+	return 0
 }
 
 // TimestampCount returns the count of unique timestampes across all series in the DataSet

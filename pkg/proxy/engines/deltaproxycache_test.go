@@ -890,7 +890,8 @@ func TestDeltaProxyCacheRequestFastForward(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	ev.SetStep(step)
+	trq := &timeseries.TimeRangeQuery{Step: step}
+	ev.SetTimeRangeQuery(trq)
 
 	if len(ev.Extents()) == 1 && len(em.Extents()) > 0 &&
 		ev.Extents()[0].Start.Truncate(time.Second).After(em.Extents()[0].End) {

@@ -91,10 +91,11 @@ const testDF4Response2 = `{
 }
 `
 
-func TestDF4SeriesEnvelopeSetStep(t *testing.T) {
+func TestDF4SeriesEnvelopeSetTimeRangeQuery(t *testing.T) {
 	se := DF4SeriesEnvelope{}
 	const step = time.Duration(300) * time.Minute
-	se.SetStep(step)
+	trq := &timeseries.TimeRangeQuery{Step: step}
+	se.SetTimeRangeQuery(trq)
 	if se.Step() != step {
 		t.Errorf("Expected step: %v, got: %v", step, se.Step())
 	}

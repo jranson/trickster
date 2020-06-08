@@ -23,9 +23,9 @@ import (
 
 func testDataSet() *DataSet {
 	ds := &DataSet{
-		StepDuration: time.Duration(5 * Second),
-		Results:      []*Result{testResult()},
-		ExtentList:   ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(10, 0)}},
+		Results:        []*Result{testResult()},
+		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(10, 0)}},
+		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
 	}
 	ds.PointsLookup = PointsLookup{
 		ds.Results[0].SeriesList[0].Points[0].Epoch: map[Hash]*Point{
@@ -126,9 +126,9 @@ func testDataSet2() *DataSet {
 	}
 
 	ds := &DataSet{
-		StepDuration: time.Duration(5 * Second),
-		Results:      []*Result{r1, r2},
-		ExtentList:   ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(30, 0)}},
+		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
+		Results:        []*Result{r1, r2},
+		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(30, 0)}},
 	}
 
 	buildPointsLookup := func(ds *DataSet) PointsLookup {
@@ -201,9 +201,11 @@ func TestStepDuration(t *testing.T) {
 	}
 }
 
-func TestSetStep(t *testing.T) {
+func TestSetTimeRangeQuery(t *testing.T) {
 	ds := testDataSet()
-	ds.SetStep(1 * time.Second)
+	trq := &TimeRangeQuery{Step: time.Duration(1 * Second)}
+
+	ds.SetTimeRangeQuery(trq)
 	if int(ds.Step().Seconds()) != 1 {
 		t.Errorf("expected 1 got %d", int(ds.Step().Seconds()))
 	}

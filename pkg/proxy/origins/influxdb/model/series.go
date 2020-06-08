@@ -31,6 +31,29 @@ import (
 	"github.com/influxdata/influxdb/models"
 )
 
+// SeriesEnvelope represents a response object from the InfluxDB HTTP API
+type SeriesEnvelope struct {
+	Results      []Result              `json:"results"`
+	Err          string                `json:"error,omitempty"`
+	StepDuration time.Duration         `json:"step,omitempty"`
+	ExtentList   timeseries.ExtentList `json:"extents,omitempty"`
+
+	timestamps map[time.Time]bool // tracks unique timestamps in the matrix data
+	tslist     times.Times
+	isSorted   bool // tracks if the matrix data is currently sorted
+	isCounted  bool // tracks if timestamps slice is up-to-date
+
+	updateLock     sync.Mutex
+	timeRangeQuery *timeseries.TimeRangeQuery
+}
+
+// Result represents a Result returned from the InfluxDB HTTP API
+type Result struct {
+	StatementID int          `json:"statement_id"`
+	Series      []models.Row `json:"series,omitempty"`
+	Err         string       `json:"error,omitempty"`
+}
+
 // SetExtents overwrites a Timeseries's known extents with the provided extent list
 func (se *SeriesEnvelope) SetExtents(extents timeseries.ExtentList) {
 	el := make(timeseries.ExtentList, len(extents))
@@ -98,9 +121,13 @@ func (se *SeriesEnvelope) Step() time.Duration {
 	return se.StepDuration
 }
 
-// SetStep sets the step for the Timeseries
-func (se *SeriesEnvelope) SetStep(step time.Duration) {
-	se.StepDuration = step
+// SetTimeRangeQuery sets the trq for the Timeseries
+func (se *SeriesEnvelope) SetTimeRangeQuery(trq *timeseries.TimeRangeQuery) {
+	if trq == nil {
+		return
+	}
+	se.StepDuration = trq.Step
+	se.timeRangeQuery = trq
 }
 
 type seriesKey struct {

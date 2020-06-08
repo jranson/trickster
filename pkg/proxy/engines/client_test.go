@@ -422,6 +422,8 @@ type MatrixEnvelope struct {
 	tslist     times.Times
 	isSorted   bool // tracks if the matrix data is currently sorted
 	isCounted  bool // tracks if timestamps slice is up-to-date
+
+	timeRangeQuery *timeseries.TimeRangeQuery
 }
 
 // MatrixData represents the Data body of a Matrix response object from the Prometheus HTTP API
@@ -491,9 +493,13 @@ func (me *MatrixEnvelope) Step() time.Duration {
 	return me.StepDuration
 }
 
-// SetStep sets the step for the Timeseries
-func (me *MatrixEnvelope) SetStep(step time.Duration) {
-	me.StepDuration = step
+// SetTimeRangeQuery sets the TimeRangeQuery for the Timeseries
+func (me *MatrixEnvelope) SetTimeRangeQuery(trq *timeseries.TimeRangeQuery) {
+	if trq == nil {
+		return
+	}
+	me.StepDuration = trq.Step
+	me.timeRangeQuery = trq
 }
 
 // Merge merges the provided Timeseries list into the base Timeseries
@@ -561,6 +567,11 @@ func (me *MatrixEnvelope) Clone() timeseries.Timeseries {
 		StepDuration: me.StepDuration,
 		ExtentList:   make(timeseries.ExtentList, len(me.ExtentList)),
 	}
+
+	if me.timeRangeQuery != nil {
+		resMe.timeRangeQuery = me.timeRangeQuery.Clone()
+	}
+
 	copy(resMe.ExtentList, me.ExtentList)
 	copy(resMe.tslist, me.tslist)
 

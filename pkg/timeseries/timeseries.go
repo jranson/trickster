@@ -37,8 +37,6 @@ type Timeseries interface {
 	TimestampCount() int
 	// Step should return the Step Interval of the Timeseries
 	Step() time.Duration
-	// SetStep should update the Step Interval of the Timeseries
-	SetStep(time.Duration)
 	// Merge should merge the Timeseries collection into the source Timeseries
 	Merge(bool, ...Timeseries)
 	// Sort should uniqueify and sort all series by Timestamp
@@ -57,4 +55,6 @@ type Timeseries interface {
 	ValueCount() int
 	// Size returns the approximate memory byte size of the timeseries object
 	Size() int
+	// SetTimeRangeQuery sets the TimeRangeQuery associated with the Timeseries
+	SetTimeRangeQuery(*TimeRangeQuery)
 }

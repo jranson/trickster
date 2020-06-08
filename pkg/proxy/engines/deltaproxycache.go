@@ -326,7 +326,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 				headers.Merge(doc.Headers, resp.Header)
 				doc.headerLock.Unlock()
 				uncachedValueCount += nts.ValueCount()
-				nts.SetStep(trq.Step)
+				nts.SetTimeRangeQuery(trq)
 				nts.SetExtents([]timeseries.Extent{*e})
 				appendLock.Lock()
 				mts = append(mts, nts)
@@ -358,7 +358,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 						tl.Pairs{"body": string(body)})
 					return
 				}
-				ffts.SetStep(trq.Step)
+				ffts.SetTimeRangeQuery(trq)
 				x := ffts.Extents()
 				if isHit {
 					ffStatus = "hit"
@@ -451,7 +451,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 		rts.Merge(false, ffts)
 	}
 	rts.SetExtents(nil) // so they are not included in the client response json
-	rts.SetStep(0)
+	rts.SetTimeRangeQuery(&timeseries.TimeRangeQuery{})
 	rh := doc.SafeHeaderClone()
 	sc := doc.StatusCode
 
@@ -509,7 +509,7 @@ func fetchTimeseries(pr *proxyRequest, trq *timeseries.TimeRangeQuery,
 	}
 
 	ts.SetExtents([]timeseries.Extent{trq.Extent})
-	ts.SetStep(trq.Step)
+	ts.SetTimeRangeQuery(trq)
 
 	return ts, d, elapsed, nil
 }

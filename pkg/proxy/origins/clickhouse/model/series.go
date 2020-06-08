@@ -78,16 +78,25 @@ type ResultsEnvelope struct {
 	tslist     times.Times
 	isSorted   bool // tracks if the matrix data is currently sorted
 	isCounted  bool // tracks if timestamps slice is up-to-date
+
+	timeRangeQuery *timeseries.TimeRangeQuery
 }
 
 // Step returns the step for the Timeseries
 func (re *ResultsEnvelope) Step() time.Duration {
+	if re.timeRangeQuery != nil {
+		return re.timeRangeQuery.Step
+	}
 	return re.StepDuration
 }
 
-// SetStep sets the step for the Timeseries
-func (re *ResultsEnvelope) SetStep(step time.Duration) {
-	re.StepDuration = step
+// SetTimeRangeQuery sets the step for the Timeseries
+func (re *ResultsEnvelope) SetTimeRangeQuery(trq *timeseries.TimeRangeQuery) {
+	if trq == nil {
+		return
+	}
+	re.StepDuration = trq.Step
+	re.timeRangeQuery = trq
 }
 
 // Merge merges the provided Timeseries list into the base Timeseries (in the order provided)
@@ -121,7 +130,7 @@ func (re *ResultsEnvelope) Merge(sort bool, collection ...timeseries.Timeseries)
 		}
 	}
 
-	re.ExtentList = re.ExtentList.Compress(re.StepDuration)
+	re.ExtentList = re.ExtentList.Compress(re.Step())
 	re.isSorted = false
 	re.isCounted = false
 	if sort {
@@ -176,9 +185,9 @@ func (re *ResultsEnvelope) mergeSeriesOrder(so2 []string) {
 // Clone returns a perfect copy of the base Timeseries
 func (re *ResultsEnvelope) Clone() timeseries.Timeseries {
 	re2 := &ResultsEnvelope{
-		isCounted:    re.isCounted,
-		isSorted:     re.isSorted,
-		StepDuration: re.StepDuration,
+		isCounted:      re.isCounted,
+		isSorted:       re.isSorted,
+		timeRangeQuery: re.timeRangeQuery.Clone(),
 	}
 
 	wg := sync.WaitGroup{}
@@ -269,7 +278,7 @@ func (re *ResultsEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent
 	}
 
 	tc := re.TimestampCount()
-	el := timeseries.ExtentListLRU(re.ExtentList).UpdateLastUsed(lur, re.StepDuration)
+	el := timeseries.ExtentListLRU(re.ExtentList).UpdateLastUsed(lur, re.Step())
 	sort.Sort(el)
 	if len(re.Data) == 0 || tc <= sz {
 		return
@@ -281,7 +290,7 @@ func (re *ResultsEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent
 	var ok bool
 
 	for _, x := range el {
-		for ts := x.Start; !x.End.Before(ts) && !done; ts = ts.Add(re.StepDuration) {
+		for ts := x.Start; !x.End.Before(ts) && !done; ts = ts.Add(re.Step()) {
 			if _, ok = re.timestamps[ts]; ok {
 				removals[ts] = true
 				done = len(removals) >= rc
@@ -318,13 +327,13 @@ func (re *ResultsEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent
 	for _, t := range tl {
 		for i, e := range el {
 			if e.StartsAt(t) {
-				el[i].Start = e.Start.Add(re.StepDuration)
+				el[i].Start = e.Start.Add(re.Step())
 			}
 		}
 	}
 	wg.Wait()
 
-	re.ExtentList = timeseries.ExtentList(el).Compress(re.StepDuration)
+	re.ExtentList = timeseries.ExtentList(el).Compress(re.Step())
 	re.Sort()
 }
 
@@ -616,7 +625,7 @@ func (re ResultsEnvelope) MarshalJSON() ([]byte, error) {
 		Meta:         re.Meta,
 		RawData:      make([]ResponseValue, 0, fl),
 		Rows:         re.ValueCount(),
-		StepDuration: re.StepDuration,
+		StepDuration: re.Step(),
 		ExtentList:   re.ExtentList,
 	}
 
@@ -742,7 +751,7 @@ func (re *ResultsEnvelope) UnmarshalJSON(b []byte) error {
 
 	re.Meta = response.Meta
 	re.ExtentList = response.ExtentList
-	re.StepDuration = response.StepDuration
+	re.timeRangeQuery = &timeseries.TimeRangeQuery{Step: response.StepDuration}
 	re.SeriesOrder = make([]string, 0)
 
 	// Assume the first item in the meta array is the time field, and the second is the value field

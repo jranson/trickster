@@ -94,21 +94,13 @@ func TestDataPointMarshalJSON(t *testing.T) {
 
 }
 
-func TestSeriesEnvelopeSetStep(t *testing.T) {
+func TestSeriesEnvelopeSetTimeRangeQuery(t *testing.T) {
 	se := SeriesEnvelope{}
 	const step = time.Duration(300) * time.Minute
-	se.SetStep(step)
-	if se.StepDuration != step {
-		t.Errorf("Expected step: %v, got: %v", step, se.StepDuration)
-	}
-}
-
-func TestSeriesEnvelopeStep(t *testing.T) {
-	se := SeriesEnvelope{}
-	const step = time.Duration(300) * time.Minute
-	se.SetStep(step)
+	trq := &timeseries.TimeRangeQuery{Step: step}
+	se.SetTimeRangeQuery(trq)
 	if se.Step() != step {
-		t.Errorf("Expected step: %v, got: %v", step, se.Step())
+		t.Errorf("Expected step: %v, got: %v", step, se.StepDuration)
 	}
 }
 

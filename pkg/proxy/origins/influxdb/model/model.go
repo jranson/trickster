@@ -20,36 +20,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"sync"
-	"time"
 
-	"github.com/tricksterproxy/trickster/pkg/sort/times"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
-
-	"github.com/influxdata/influxdb/models"
 )
-
-// SeriesEnvelope represents a response object from the InfluxDB HTTP API
-type SeriesEnvelope struct {
-	Results      []Result              `json:"results"`
-	Err          string                `json:"error,omitempty"`
-	StepDuration time.Duration         `json:"step,omitempty"`
-	ExtentList   timeseries.ExtentList `json:"extents,omitempty"`
-
-	timestamps map[time.Time]bool // tracks unique timestamps in the matrix data
-	tslist     times.Times
-	isSorted   bool // tracks if the matrix data is currently sorted
-	isCounted  bool // tracks if timestamps slice is up-to-date
-
-	updateLock sync.Mutex
-}
-
-// Result represents a Result returned from the InfluxDB HTTP API
-type Result struct {
-	StatementID int          `json:"statement_id"`
-	Series      []models.Row `json:"series,omitempty"`
-	Err         string       `json:"error,omitempty"`
-}
 
 // MarshalTimeseries converts a Timeseries into a JSON blob
 func MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {

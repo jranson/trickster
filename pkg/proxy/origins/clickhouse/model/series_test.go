@@ -27,19 +27,21 @@ import (
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
 )
 
-func TestSetStep(t *testing.T) {
+func TestSetTimeRangeQuery(t *testing.T) {
 	re := ResultsEnvelope{}
 	const step = time.Duration(300) * time.Minute
-	re.SetStep(step)
-	if re.StepDuration != step {
-		t.Errorf(`expected "%s". got "%s"`, testStep, re.StepDuration)
+	timeRangeQuery := &timeseries.TimeRangeQuery{Step: step}
+	re.SetTimeRangeQuery(timeRangeQuery)
+	if re.Step() != step {
+		t.Errorf(`expected "%s". got "%s"`, testStep, re.Step())
 	}
 }
 
 func TestStep(t *testing.T) {
 	re := ResultsEnvelope{}
 	const step = time.Duration(300) * time.Minute
-	re.SetStep(step)
+	timeRangeQuery := &timeseries.TimeRangeQuery{Step: step}
+	re.SetTimeRangeQuery(timeRangeQuery)
 	if re.Step() != step {
 		t.Errorf(`expected "%s". got "%s"`, testStep, re.Step())
 	}
@@ -63,7 +65,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10, 0), End: time.Unix(10, 0)},
 				},
-				StepDuration: time.Duration(5) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5) * time.Second},
 			},
 			b: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -79,7 +81,7 @@ func TestMerge(t *testing.T) {
 					timeseries.Extent{Start: time.Unix(5, 0), End: time.Unix(5, 0)},
 					timeseries.Extent{Start: time.Unix(15, 0), End: time.Unix(15, 0)},
 				},
-				StepDuration: time.Duration(5) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5) * time.Second},
 			},
 			merged: &ResultsEnvelope{
 				isCounted:  true,
@@ -99,7 +101,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(5, 0), End: time.Unix(15, 0)},
 				},
-				StepDuration: time.Duration(5) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5) * time.Second},
 			},
 		},
 		// Run 1: Empty second series
@@ -116,7 +118,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(10000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			b: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -125,8 +127,8 @@ func TestMerge(t *testing.T) {
 						Points: []Point{},
 					},
 				},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: time.Duration(5000) * time.Second,
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			merged: &ResultsEnvelope{
 				isCounted:  true,
@@ -144,7 +146,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(10000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 		},
 		// Run 2: second series has new metric
@@ -161,7 +163,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(10000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			b: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -175,7 +177,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(15000, 0), End: time.Unix(15000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			merged: &ResultsEnvelope{
 				isCounted:  true,
@@ -199,7 +201,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(15000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 		},
 		// Run 3: merge one metric, one metric unchanged
@@ -222,7 +224,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(10000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			b: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -236,7 +238,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(15000, 0), End: time.Unix(15000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			merged: &ResultsEnvelope{
 				isCounted:  true,
@@ -261,7 +263,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(15000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 		},
 		// Run 4: merge multiple extents
@@ -286,7 +288,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(15000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			b: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -308,7 +310,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(30000, 0), End: time.Unix(35000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			merged: &ResultsEnvelope{
 				isCounted: true,
@@ -341,7 +343,7 @@ func TestMerge(t *testing.T) {
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(15000, 0)},
 					timeseries.Extent{Start: time.Unix(30000, 0), End: time.Unix(35000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 		},
 		//
@@ -368,7 +370,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(15000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			b: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -390,7 +392,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(15000, 0), End: time.Unix(20000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 			merged: &ResultsEnvelope{
 				isCounted: true,
@@ -419,7 +421,7 @@ func TestMerge(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(10000, 0), End: time.Unix(20000, 0)},
 				},
-				StepDuration: time.Duration(5000) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5000) * time.Second},
 			},
 		},
 	}
@@ -452,7 +454,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1644004600, 0), End: time.Unix(1644004600, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -466,7 +468,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1644004600, 0), End: time.Unix(1644004600, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(0, 0),
@@ -487,7 +489,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1544004600, 0), End: time.Unix(1544004600, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -501,7 +503,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1544004600, 0), End: time.Unix(1544004600, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(0, 0),
@@ -522,12 +524,12 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1544004600, 0), End: time.Unix(1544004600, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
-				Data:         map[string]*DataSet{},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: testStep,
+				Data:           map[string]*DataSet{},
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(0, 0),
@@ -548,12 +550,12 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(100, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
-				Data:         map[string]*DataSet{},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: testStep,
+				Data:           map[string]*DataSet{},
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(10000, 0),
@@ -576,7 +578,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -590,7 +592,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(300, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(300, 0),
@@ -613,7 +615,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -627,7 +629,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(200, 0), End: time.Unix(200, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(200, 0),
@@ -650,7 +652,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -665,7 +667,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(200, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(200, 0),
@@ -681,13 +683,13 @@ func TestCropToRange(t *testing.T) {
 						Points: []Point{},
 					},
 				},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: time.Duration(100) * time.Second,
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
-				Data:         map[string]*DataSet{},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: time.Duration(100) * time.Second,
+				Data:           map[string]*DataSet{},
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(200, 0),
@@ -733,7 +735,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(600, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -757,7 +759,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(400, 0), End: time.Unix(600, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(400, 0),
@@ -802,7 +804,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(600, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -826,7 +828,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(400, 0), End: time.Unix(600, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(400, 0),
@@ -871,7 +873,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(100, 0), End: time.Unix(600, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -895,7 +897,7 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(400, 0), End: time.Unix(600, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(400, 0),
@@ -922,14 +924,14 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(200, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{},
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(200, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(100, 0),
@@ -943,14 +945,14 @@ func TestCropToRange(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(200, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{},
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(300, 0), End: time.Unix(300, 0)},
 				},
-				StepDuration: time.Duration(100) * time.Second,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(100) * time.Second},
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(300, 0),
@@ -995,7 +997,7 @@ func TestCropToSize(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1444004600, 0), End: time.Unix(1444004600, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -1009,10 +1011,10 @@ func TestCropToSize(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1444004600, 0), End: time.Unix(1444004600, 0)},
 				},
-				StepDuration: testStep,
-				timestamps:   map[time.Time]bool{time.Unix(1444004600, 0): true},
-				tslist:       times.Times{time.Unix(1444004600, 0)},
-				isCounted:    true,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
+				timestamps:     map[time.Time]bool{time.Unix(1444004600, 0): true},
+				tslist:         times.Times{time.Unix(1444004600, 0)},
+				isCounted:      true,
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(0, 0),
@@ -1037,7 +1039,7 @@ func TestCropToSize(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1444004600, 0), End: time.Unix(1444004610, 0)},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -1051,11 +1053,11 @@ func TestCropToSize(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1444004610, 0), End: time.Unix(1444004610, 0)},
 				},
-				StepDuration: testStep,
-				timestamps:   map[time.Time]bool{time.Unix(1444004610, 0): true},
-				tslist:       times.Times{time.Unix(1444004610, 0)},
-				isCounted:    true,
-				isSorted:     true,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
+				timestamps:     map[time.Time]bool{time.Unix(1444004610, 0): true},
+				tslist:         times.Times{time.Unix(1444004610, 0)},
+				isCounted:      true,
+				isSorted:       true,
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(0, 0),
@@ -1074,13 +1076,13 @@ func TestCropToSize(t *testing.T) {
 						Points: []Point{},
 					},
 				},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: testStep,
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
-				Data:         map[string]*DataSet{},
-				ExtentList:   timeseries.ExtentList{},
-				StepDuration: testStep,
+				Data:           map[string]*DataSet{},
+				ExtentList:     timeseries.ExtentList{},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			extent: timeseries.Extent{},
 			size:   1,
@@ -1102,7 +1104,7 @@ func TestCropToSize(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1444004610, 0), End: now},
 				},
-				StepDuration: testStep,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
 			},
 			after: &ResultsEnvelope{
 				Data: map[string]*DataSet{
@@ -1116,11 +1118,11 @@ func TestCropToSize(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1444004610, 0), End: now.Add(-5 * time.Minute)},
 				},
-				StepDuration: testStep,
-				timestamps:   map[time.Time]bool{time.Unix(1444004610, 0): true},
-				tslist:       times.Times{time.Unix(1444004610, 0)},
-				isCounted:    true,
-				isSorted:     false,
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: testStep},
+				timestamps:     map[time.Time]bool{time.Unix(1444004610, 0): true},
+				tslist:         times.Times{time.Unix(1444004610, 0)},
+				isCounted:      true,
+				isSorted:       false,
 			},
 			extent: timeseries.Extent{
 				Start: time.Unix(0, 0),
@@ -1180,8 +1182,8 @@ func TestClone(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1644001200, 0), End: time.Unix(1644001200, 0)},
 				},
-				StepDuration: time.Duration(3600) * time.Second,
-				SeriesOrder:  []string{"a"},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(3600) * time.Second},
+				SeriesOrder:    []string{"a"},
 			},
 		},
 
@@ -1209,8 +1211,8 @@ func TestClone(t *testing.T) {
 				ExtentList: timeseries.ExtentList{
 					timeseries.Extent{Start: time.Unix(1644001200, 0), End: time.Unix(1644004800, 0)},
 				},
-				StepDuration: time.Duration(3600) * time.Second,
-				SeriesOrder:  []string{"a", "b"},
+				timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(3600) * time.Second},
+				SeriesOrder:    []string{"a", "b"},
 			},
 		},
 	}
@@ -1502,7 +1504,7 @@ func TestSize(t *testing.T) {
 		ExtentList: timeseries.ExtentList{
 			timeseries.Extent{Start: time.Unix(5, 0), End: time.Unix(15, 0)},
 		},
-		StepDuration: time.Duration(5) * time.Second,
+		timeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5) * time.Second},
 	}
 	i := r.Size()
 	const expected = 370
