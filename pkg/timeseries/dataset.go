@@ -46,7 +46,7 @@ type DataSet struct {
 	// Sorter is the DataSet's Sort function, which defaults to DefaultSort
 	Sorter func()
 	// Merger is the DataSet's Merge function, which defaults to DefaultMerge
-	Merger func(...Timeseries)
+	Merger func(sortSeries bool, ts ...Timeseries)
 	// SizeCropper is the DataSet's CropToSize function, whcih defauls to DefautlSizeCropper
 	SizeCropper func(int, time.Time, Extent)
 	// RangeCropper is the DataSet's CropToRange function, whcih defauls to DefautlRangeCropper
@@ -98,14 +98,14 @@ func (ds *DataSet) Clone() Timeseries {
 // This implementation ignores any Timeseries that are not of type *DataSet
 func (ds *DataSet) Merge(sortSeries bool, collection ...Timeseries) {
 	if ds.Merger != nil {
-		ds.Merger(collection...)
+		ds.Merger(sortSeries, collection...)
 		return
 	}
-	ds.DefaultMerger(collection...)
+	ds.DefaultMerger(sortSeries, collection...)
 }
 
 // DefaultMerger is the default Merger function
-func (ds *DataSet) DefaultMerger(collection ...Timeseries) {
+func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 	mtx := sync.Mutex{}
 	wg := sync.WaitGroup{}
 
@@ -169,36 +169,35 @@ func (ds *DataSet) DefaultMerger(collection ...Timeseries) {
 						}
 						m[es.Header.Hash] = p
 					}
+					mtx.Unlock()
 
 					// This will sort and dupe kill the list of points, keeping the newest version
-					sort.Sort(es.Points)
-					n := len(es.Points)
-					if n <= 1 {
-						x := make(Points, n)
-						copy(x, es.Points[0:n])
-						es.Points = x
-					} else {
-						j := 1
-						for i := 1; i < n; i++ {
-							if es.Points[i] != es.Points[i-1] {
-								es.Points[j] = es.Points[i]
-								j++
+					if sortSeries {
+						sort.Sort(es.Points)
+						n := len(es.Points)
+						if n <= 1 {
+							x := make(Points, n)
+							copy(x, es.Points[0:n])
+							es.Points = x
+						} else {
+							j := 1
+							for i := 1; i < n; i++ {
+								if es.Points[i] != es.Points[i-1] {
+									es.Points[j] = es.Points[i]
+									j++
+								}
 							}
+							x := make(Points, len(es.Points[0:j]))
+							copy(x, es.Points[0:j])
+							es.Points = x
 						}
-						x := make(Points, len(es.Points[0:j]))
-						copy(x, es.Points[0:j])
-						es.Points = x
 					}
-					mtx.Unlock()
 					wg.Done()
 				}(r.SeriesList[i])
 			}
 			wg.Wait()
-			mtx.Lock()
 			ds.ExtentList = append(ds.ExtentList, ds2.ExtentList...)
 			orderMarkers = append(orderMarkers, om...)
-			// other housekeeping?
-			mtx.Unlock()
 		}
 	}
 
