@@ -45,13 +45,6 @@ type TimeseriesClient interface {
 	// SetExtent will update an upstream request's timerange
 	// parameters based on the provided timeseries.Extent
 	SetExtent(*http.Request, *timeseries.TimeRangeQuery, *timeseries.Extent)
-	// SetEncodingFuncs will set the encoders
-	// // UnmarshalTimeseries will return a Timeseries from the provided byte slice
-	// UnmarshalTimeseries([]byte) (timeseries.Timeseries, error)
-	// // MarshalTimeseries will return a byte slice from  the provided Timeseries
-	// MarshalTimeseries(timeseries.Timeseries) ([]byte, error)
-	// // MarshalTimeseriesWriter will write the marshaled bytes for the Timeseries to the provided writer
-	// MarshalTimeseriesWriter(timeseries.Timeseries, io.Writer) error
 	// HTTPClient will return the HTTP Client for this Origin
 	HTTPClient() *http.Client
 	// SetCache sets the Cache object the client will use when caching origin content
