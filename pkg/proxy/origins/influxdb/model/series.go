@@ -95,7 +95,7 @@ func (se *SeriesEnvelope) updateTimestamps() {
 
 	for i := range se.Results {
 		for j, s := range se.Results[i].Series {
-			ti := str.IndexOfString(s.Columns, "time")
+			ti := str.IndexInSlice(s.Columns, "time")
 			if ti < 0 {
 				continue
 			}
@@ -320,7 +320,7 @@ func (se *SeriesEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent)
 		}
 	}
 
-	ti := str.IndexOfString(se.Results[0].Series[0].Columns, "time")
+	ti := str.IndexInSlice(se.Results[0].Series[0].Columns, "time")
 
 	for i, r := range se.Results {
 		for j, s := range r.Series {
@@ -397,7 +397,7 @@ func (se *SeriesEnvelope) CropToRange(e timeseries.Extent) {
 
 		for j, s := range r.Series {
 			// check the index of the time column again just in case it changed in the next series
-			ti := str.IndexOfString(s.Columns, "time")
+			ti := str.IndexInSlice(s.Columns, "time")
 			if ti != -1 {
 				start := -1
 				end := -1
@@ -456,7 +456,7 @@ func (se *SeriesEnvelope) Sort() {
 
 	var hasWarned bool
 	tsm := map[time.Time]bool{}
-	if ti := str.IndexOfString(se.Results[0].Series[0].Columns, "time"); ti != -1 {
+	if ti := str.IndexInSlice(se.Results[0].Series[0].Columns, "time"); ti != -1 {
 		for ri := range se.Results {
 			seriesWG := sync.WaitGroup{}
 			for si := range se.Results[ri].Series {

@@ -22,8 +22,8 @@ import (
 	"strings"
 )
 
-// IndexOfString returns the index of a string element in a given slice
-func IndexOfString(arr []string, val string) int {
+// IndexInSlice returns the index of a string element in a given slice
+func IndexInSlice(arr []string, val string) int {
 	for i, v := range arr {
 		if v == val {
 			return i
