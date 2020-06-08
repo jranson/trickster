@@ -17,6 +17,7 @@
 package model
 
 import (
+	"bytes"
 	"strconv"
 	"testing"
 
@@ -125,22 +126,23 @@ func TestMarshalTimeseriesRaw(t *testing.T) {
 
 	cf := ts.(*timeseries.DataSet)
 
-	var b []byte
-	b, err = marshalTimeseriesRaw(cf)
+	b := bytes.NewBuffer(nil)
+	err = marshalTimeseriesRaw(cf, b)
 	if err != nil {
 		t.Error(err)
 	}
 
-	s := string(b)
+	s := b.String()
 
 	if s != testResult1 {
 		t.Errorf("expected [%s] got [%s]", testResult1, s)
 	}
 
 	cf.Results = append(cf.Results, &timeseries.Result{})
-	b, err = marshalTimeseriesRaw(cf)
-	if b != nil {
-		t.Error("expected nil")
+	b = bytes.NewBuffer(nil)
+	err = marshalTimeseriesRaw(cf, b)
+	if len(b.Bytes()) != 0 {
+		t.Error("expected empty buffer")
 	}
 	if err != nil {
 		t.Error(err)
@@ -150,11 +152,12 @@ func TestMarshalTimeseriesRaw(t *testing.T) {
 
 func TestMarshalTimeseriesJSON(t *testing.T) {
 
-	b, err := marshalTimeseriesJSON(nil)
+	b := bytes.NewBuffer(nil)
+	err := marshalTimeseriesJSON(nil, b)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(b) > 0 {
+	if len(b.Bytes()) > 0 {
 		t.Error("expected empty slice")
 	}
 
@@ -166,12 +169,13 @@ func TestMarshalTimeseriesJSON(t *testing.T) {
 
 	cf := ts.(*timeseries.DataSet)
 
-	b, err = marshalTimeseriesJSON(cf)
+	b = bytes.NewBuffer(nil)
+	err = marshalTimeseriesJSON(cf, b)
 	if err != nil {
 		t.Error(err)
 	}
 
-	s := string(b)
+	s := string(b.Bytes())
 
 	if s != testResultJSON1 {
 		t.Errorf("expected [%s] got [%s]", md5.Checksum(testResultJSON1), md5.Checksum(s))

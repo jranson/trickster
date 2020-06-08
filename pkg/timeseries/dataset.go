@@ -17,6 +17,7 @@
 package timeseries
 
 import (
+	"io"
 	"sort"
 	"sync"
 	"time"
@@ -55,7 +56,7 @@ type DataSet struct {
 }
 
 // Marshaler is a function that serializes the provided DataSet into a byte slice
-type Marshaler func(*DataSet) ([]byte, error)
+type Marshaler func(*DataSet, io.Writer) error
 
 // Clone returns a new, perfect copy of the DataSet
 func (ds *DataSet) Clone() Timeseries {

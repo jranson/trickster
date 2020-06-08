@@ -17,6 +17,8 @@
 package model
 
 import (
+	"bytes"
+	"io"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,27 +34,36 @@ var marshalers = map[byte]timeseries.Marshaler{
 
 // MarshalTimeseries converts a Timeseries into a JSON blob
 func MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	err := MarshalTimeseriesWriter(ts, buf)
+	return buf.Bytes(), err
+}
+
+// MarshalTimeseriesWriter converts a Timeseries into a JSON blob via an io.Writer
+func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+
+	// // MarshalTimeseries converts a Timeseries into a JSON blob
+	// func MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
 	if ts == nil {
-		return nil, timeseries.ErrUnknownFormat
+		return timeseries.ErrUnknownFormat
 	}
 	if ds, ok := ts.(*timeseries.DataSet); ok {
 		if marshaler, ok2 := marshalers[ds.OutputFormat]; ok2 {
-			return marshaler(ds)
+			return marshaler(ds, w)
 		}
 	}
-	return nil, timeseries.ErrUnknownFormat
+	return timeseries.ErrUnknownFormat
 }
 
-func marshalTimeseriesRaw(ds *timeseries.DataSet) ([]byte, error) {
+func marshalTimeseriesRaw(ds *timeseries.DataSet, w io.Writer) error {
 	if ds == nil || len(ds.Results) != 1 || len(ds.ExtentList) != 1 {
-		return nil, nil
+		return nil
 	}
-	sb := strings.Builder{}
 	for _, s := range ds.Results[0].SeriesList {
-		sb.WriteString(s.Header.Name + "," +
+		w.Write([]byte(s.Header.Name + "," +
 			strconv.FormatInt(ds.ExtentList[0].Start.Unix(), 10) + "," +
 			strconv.FormatInt(ds.ExtentList[0].End.Unix(), 10) + "," +
-			strconv.Itoa(int(ds.Step().Seconds())) + "|")
+			strconv.Itoa(int(ds.Step().Seconds())) + "|"))
 		sep := ","
 		for i, v := range s.Points {
 			if i == len(s.Points)-1 {
@@ -60,24 +71,23 @@ func marshalTimeseriesRaw(ds *timeseries.DataSet) ([]byte, error) {
 			}
 			if len(v.Values) == 1 {
 				if f, ok := v.Values[0].(float64); ok {
-					sb.WriteString(strconv.FormatFloat(f, 'g', -1, 64) + sep)
+					w.Write([]byte(strconv.FormatFloat(f, 'g', -1, 64) + sep))
 				}
 			}
 		}
-		sb.WriteString("\n")
+		w.Write([]byte("\n"))
 	}
-	return []byte(sb.String()), nil
+	return nil
 }
 
-func marshalTimeseriesJSON(ds *timeseries.DataSet) ([]byte, error) {
+func marshalTimeseriesJSON(ds *timeseries.DataSet, w io.Writer) error {
 	if ds == nil || len(ds.Results) != 1 || len(ds.ExtentList) != 1 {
-		return nil, nil
+		return nil
 	}
-	sb := strings.Builder{}
-	sb.WriteString("[")
+	w.Write([]byte("["))
 	sep2 := ""
 	for _, s := range ds.Results[0].SeriesList {
-		sb.WriteString(sep2 + "{\n  \"target\": \"" + s.Header.Name + "\",\n  \"datapoints\": [\n")
+		w.Write([]byte(sep2 + "{\n  \"target\": \"" + s.Header.Name + "\",\n  \"datapoints\": [\n"))
 		sep := ","
 		for i, v := range s.Points {
 			if i == len(s.Points)-1 {
@@ -85,17 +95,17 @@ func marshalTimeseriesJSON(ds *timeseries.DataSet) ([]byte, error) {
 			}
 			if len(v.Values) == 1 {
 				if f, ok := v.Values[0].(float64); ok {
-					sb.WriteString("    [" + strconv.FormatFloat(f, 'g', -1, 64) +
+					w.Write([]byte("    [" + strconv.FormatFloat(f, 'g', -1, 64) +
 						", " + strconv.FormatInt(int64(v.Epoch)/timeseries.Second, 10) + "]" +
-						sep + "\n")
+						sep + "\n"))
 				}
 			}
 		}
-		sb.WriteString("  ]\n}")
+		w.Write([]byte("  ]\n}"))
 		sep2 = ","
 	}
-	sb.WriteString("]\n")
-	return []byte(sb.String()), nil
+	w.Write([]byte("]\n"))
+	return nil
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
