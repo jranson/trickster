@@ -30,7 +30,7 @@ import (
 )
 
 // SetExtent will change the upstream request query to use the provided Extent.
-func (c Client) SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery, extent *timeseries.Extent) {
+func (c *Client) SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery, extent *timeseries.Extent) {
 
 	rsc := request.GetResources(r)
 	if rsc == nil || rsc.PathConfig == nil {

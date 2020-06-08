@@ -42,7 +42,7 @@ func (c *Client) FetchHandler(w http.ResponseWriter, r *http.Request) {
 
 // fetchHandlerSetExtent will change the upstream request query to use the
 // provided Extent.
-func (c Client) fetchHandlerSetExtent(r *http.Request,
+func (c *Client) fetchHandlerSetExtent(r *http.Request,
 	trq *timeseries.TimeRangeQuery,
 	extent *timeseries.Extent) {
 
@@ -124,7 +124,7 @@ func (c *Client) fetchHandlerParseTimeRangeQuery(
 
 // fetchHandlerDeriveCacheKey calculates a query-specific keyname based on the
 // user request.
-func (c Client) fetchHandlerDeriveCacheKey(path string, params url.Values,
+func (c *Client) fetchHandlerDeriveCacheKey(path string, params url.Values,
 	headers http.Header, body io.ReadCloser, extra string) (string, io.ReadCloser) {
 	var sb strings.Builder
 	sb.WriteString(path)

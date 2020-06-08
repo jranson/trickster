@@ -34,7 +34,7 @@ func (c *Client) RawHandler(w http.ResponseWriter, r *http.Request) {
 
 // rawHandlerSetExtent will change the upstream request query to use the
 // provided Extent.
-func (c Client) rawHandlerSetExtent(r *http.Request,
+func (c *Client) rawHandlerSetExtent(r *http.Request,
 	trq *timeseries.TimeRangeQuery,
 	extent *timeseries.Extent) {
 	q := r.URL.Query()

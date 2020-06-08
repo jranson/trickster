@@ -350,7 +350,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 			}
 			body, resp, isHit := FetchViaObjectProxyCache(ffReq)
 			if resp != nil && resp.StatusCode == http.StatusOK && len(body) > 0 {
-				ffts, err = client.UnmarshalInstantaneous(body)
+				ffts, err = client.UnmarshalTimeseries(body)
 				if err != nil {
 					ffStatus = "err"
 					pr.Logger.Error("proxy object unmarshaling failed",

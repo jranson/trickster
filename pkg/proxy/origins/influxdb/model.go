@@ -17,7 +17,9 @@
 package influxdb
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"sync"
 	"time"
 
@@ -50,13 +52,24 @@ type Result struct {
 }
 
 // MarshalTimeseries converts a Timeseries into a JSON blob
-func (c Client) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
-	// Marshal the Envelope back to a json object for Cache Storage
-	return json.Marshal(ts)
+func (c *Client) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
+	buf := bytes.NewBuffer(nil)
+	err := c.MarshalTimeseriesWriter(ts, buf)
+	return buf.Bytes(), err
+}
+
+// MarshalTimeseriesWriter converts a Timeseries into a JSON blob via an io.Writer
+func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+	b, err := json.Marshal(ts)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, bytes.NewReader(b))
+	return err
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
-func (c Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
+func (c *Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	se := &SeriesEnvelope{}
 	err := json.Unmarshal(data, se)
 	return se, err

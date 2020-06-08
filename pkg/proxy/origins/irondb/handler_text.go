@@ -39,7 +39,7 @@ func (c *Client) TextHandler(w http.ResponseWriter, r *http.Request) {
 
 // textHandlerSetExtent will change the upstream request query to use the
 // provided Extent.
-func (c Client) textHandlerSetExtent(r *http.Request,
+func (c *Client) textHandlerSetExtent(r *http.Request,
 	trq *timeseries.TimeRangeQuery,
 	extent *timeseries.Extent) {
 	ps := strings.SplitN(strings.TrimPrefix(r.URL.Path, "/"), "/", 5)
@@ -85,7 +85,7 @@ func (c *Client) textHandlerParseTimeRangeQuery(
 
 // textHandlerDeriveCacheKey calculates a query-specific keyname based on the
 // user request.
-func (c Client) textHandlerDeriveCacheKey(path string, params url.Values,
+func (c *Client) textHandlerDeriveCacheKey(path string, params url.Values,
 	headers http.Header, body io.ReadCloser, extra string) (string, io.ReadCloser) {
 	var sb strings.Builder
 	sb.WriteString(path)

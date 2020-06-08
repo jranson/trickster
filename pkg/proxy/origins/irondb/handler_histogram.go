@@ -42,7 +42,7 @@ func (c *Client) HistogramHandler(w http.ResponseWriter, r *http.Request) {
 
 // histogramHandlerSetExtent will change the upstream request query to use the
 // provided Extent.
-func (c Client) histogramHandlerSetExtent(r *http.Request,
+func (c *Client) histogramHandlerSetExtent(r *http.Request,
 	trq *timeseries.TimeRangeQuery,
 	extent *timeseries.Extent) {
 	var err error
@@ -114,7 +114,7 @@ func (c *Client) histogramHandlerParseTimeRangeQuery(
 
 // histogramHandlerDeriveCacheKey calculates a query-specific keyname based on
 // the user request.
-func (c Client) histogramHandlerDeriveCacheKey(path string, params url.Values,
+func (c *Client) histogramHandlerDeriveCacheKey(path string, params url.Values,
 	headers http.Header, body io.ReadCloser, extra string) (string, io.ReadCloser) {
 	var sb strings.Builder
 	sb.WriteString(path)

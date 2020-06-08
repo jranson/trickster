@@ -38,7 +38,7 @@ func (c *Client) RollupHandler(w http.ResponseWriter, r *http.Request) {
 
 // rollupHandlerSetExtent will change the upstream request query to use the
 // provided Extent.
-func (c Client) rollupHandlerSetExtent(r *http.Request,
+func (c *Client) rollupHandlerSetExtent(r *http.Request,
 	trq *timeseries.TimeRangeQuery,
 	extent *timeseries.Extent) {
 

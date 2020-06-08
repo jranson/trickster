@@ -17,6 +17,7 @@
 package origins
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/tricksterproxy/trickster/pkg/cache"
@@ -49,9 +50,8 @@ type TimeseriesClient interface {
 	UnmarshalTimeseries([]byte) (timeseries.Timeseries, error)
 	// MarshalTimeseries will return a byte slice from  the provided Timeseries
 	MarshalTimeseries(timeseries.Timeseries) ([]byte, error)
-	// UnmarshalInstantaneous will return an Instantaneous Timeseries
-	// (only one value instead of a series) from the provided byte slice
-	UnmarshalInstantaneous([]byte) (timeseries.Timeseries, error)
+	// MarshalTimeseriesWriter will write the marshaled bytes for the Timeseries to the provided writer
+	MarshalTimeseriesWriter(timeseries.Timeseries, io.Writer) error
 	// HTTPClient will return the HTTP Client for this Origin
 	HTTPClient() *http.Client
 	// SetCache sets the Cache object the client will use when caching origin content

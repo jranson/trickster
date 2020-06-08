@@ -17,6 +17,8 @@
 package prometheus
 
 import (
+	"io"
+
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins/prometheus/model"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
 )
@@ -33,7 +35,7 @@ func (c *Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error)
 	return model.UnmarshalTimeseries(data)
 }
 
-// UnmarshalInstantaneous converts a JSON blob into an Instantaneous Data Point
-func (c *Client) UnmarshalInstantaneous(data []byte) (timeseries.Timeseries, error) {
-	return model.UnmarshalTimeseries(data)
+// MarshalTimeseriesWriter will write the marshaled bytes for the Timeseries to the provided writer
+func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+	return model.MarshalTimeseriesWriter(ts, w)
 }

@@ -17,8 +17,10 @@
 package irondb
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 	"strconv"
 	"strings"
@@ -330,9 +332,21 @@ func (se *SeriesEnvelope) Sort() {
 	sort.Sort(se.Data)
 }
 
-// MarshalTimeseries converts a Timeseries into a JSON blob for cache storage.
+// MarshalTimeseries converts a Timeseries into a JSON blob
 func (c *Client) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
-	return json.Marshal(ts)
+	buf := bytes.NewBuffer(nil)
+	err := c.MarshalTimeseriesWriter(ts, buf)
+	return buf.Bytes(), err
+}
+
+// MarshalTimeseriesWriter converts a Timeseries into a JSON blob via an io.Writer
+func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+	b, err := json.Marshal(ts)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(w, bytes.NewReader(b))
+	return err
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries value.
@@ -352,7 +366,7 @@ func (c *Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries,
 
 // UnmarshalInstantaneous is not used for IRONdb origins and is here to conform
 // to the Client interface.
-func (c Client) UnmarshalInstantaneous(
+func (c *Client) UnmarshalInstantaneous(
 	data []byte) (timeseries.Timeseries, error) {
 	return c.UnmarshalTimeseries(data)
 }

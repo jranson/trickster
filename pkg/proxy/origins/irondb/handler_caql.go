@@ -39,7 +39,7 @@ func (c *Client) CAQLHandler(w http.ResponseWriter, r *http.Request) {
 
 // caqlHandlerSetExtent will change the upstream request query to use the
 // provided Extent.
-func (c Client) caqlHandlerSetExtent(r *http.Request,
+func (c *Client) caqlHandlerSetExtent(r *http.Request,
 	trq *timeseries.TimeRangeQuery,
 	extent *timeseries.Extent) {
 
