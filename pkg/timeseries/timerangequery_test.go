@@ -29,7 +29,7 @@ func TestCalculateDeltas(t *testing.T) {
 	// test when start is after end
 	trq := TimeRangeQuery{Statement: "up", Extent: Extent{Start: time.Unix(20, 0),
 		End: time.Unix(10, 0)}, Step: time.Duration(10) * time.Second}
-	trq.CalculateDeltas(ExtentList{Extent{}})
+	CalculateDeltas(ExtentList{Extent{}}, trq.Extent, trq.Step)
 
 	tests := []struct {
 		have                 []Extent
@@ -65,7 +65,7 @@ func TestCalculateDeltas(t *testing.T) {
 			trq := TimeRangeQuery{Statement: "up", Extent: Extent{Start: time.Unix(test.start, 0),
 				End: time.Unix(test.end, 0)}, Step: time.Duration(test.stepSecs) * time.Second}
 			trq.NormalizeExtent()
-			d := trq.CalculateDeltas(test.have)
+			d := CalculateDeltas(test.have, trq.Extent, trq.Step)
 
 			if len(d) != len(test.expected) {
 				t.Errorf("expected %v got %v", test.expected, d)

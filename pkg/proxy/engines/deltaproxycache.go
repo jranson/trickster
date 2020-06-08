@@ -210,7 +210,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 	// Find the ranges that we want, but which are not currently cached
 	var missRanges timeseries.ExtentList
 	if cacheStatus == status.LookupStatusPartialHit {
-		missRanges = trq.CalculateDeltas(cts.Extents())
+		missRanges = timeseries.CalculateDeltas(cts.Extents(), trq.Extent, trq.Step)
 	}
 
 	if len(missRanges) == 0 && cacheStatus == status.LookupStatusPartialHit {
