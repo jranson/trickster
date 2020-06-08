@@ -17,6 +17,7 @@
 package model
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
@@ -24,9 +25,9 @@ import (
 
 const testDoc = `{"status":"success","data":{"resultType":"matrix","result":[{` +
 	`"metric":{"__name__":"up","instance":"localhost:9090","job":"prometheus"},"values"` +
-	`:[[1435781430.781,"1"],[1435781445.781,"1"],[1435781460.781,"1"]]},{"metric":` +
+	`:[[1435781430,"1"],[1435781445,"1"],[1435781460,"1"]]},{"metric":` +
 	`{"__name__":"up","instance":"localhost:9091","job":"node"},"values":` +
-	`[[1435781430.781,"0"],[1435781445.781,"0"],[1435781460.781,"1"]]}]}}`
+	`[[1435781430,"0"],[1435781445,"0"],[1435781460,"1"]]}]}}`
 
 func TestUnmarshalTimeseries(t *testing.T) {
 	b := []byte(testDoc)
@@ -47,6 +48,8 @@ func TestUnmarshalTimeseries(t *testing.T) {
 
 	if string(b) != testDoc {
 		t.Error("marsahing error")
+		fmt.Println(testDoc)
+		fmt.Println(string(b))
 	}
 
 }

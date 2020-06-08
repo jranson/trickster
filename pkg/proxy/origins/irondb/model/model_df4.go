@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package irondb
+package model
 
 import (
 	"sync"

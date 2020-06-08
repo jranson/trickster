@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package irondb
+package model
 
 import (
 	"bytes"
@@ -26,6 +26,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tricksterproxy/trickster/pkg/proxy/origins/irondb/common"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
 )
 
@@ -102,7 +103,7 @@ type DataPoint struct {
 func (dp *DataPoint) MarshalJSON() ([]byte, error) {
 	v := []interface{}{}
 	tn := float64(0)
-	fv, err := strconv.ParseFloat(formatTimestamp(dp.Time, true), 64)
+	fv, err := strconv.ParseFloat(common.FormatTimestamp(dp.Time, true), 64)
 	if err == nil {
 		tn = fv
 	}
@@ -130,7 +131,7 @@ func (dp *DataPoint) UnmarshalJSON(b []byte) error {
 	}
 
 	if fv, ok := v[0].(float64); ok {
-		tv, err := parseTimestamp(strconv.FormatFloat(fv, 'f', 3, 64))
+		tv, err := common.ParseTimestamp(strconv.FormatFloat(fv, 'f', 3, 64))
 		if err != nil {
 			return err
 		}
@@ -333,14 +334,14 @@ func (se *SeriesEnvelope) Sort() {
 }
 
 // MarshalTimeseries converts a Timeseries into a JSON blob
-func (c *Client) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
+func MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
-	err := c.MarshalTimeseriesWriter(ts, buf)
+	err := MarshalTimeseriesWriter(ts, buf)
 	return buf.Bytes(), err
 }
 
 // MarshalTimeseriesWriter converts a Timeseries into a JSON blob via an io.Writer
-func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 	b, err := json.Marshal(ts)
 	if err != nil {
 		return err
@@ -350,7 +351,7 @@ func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) 
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries value.
-func (c *Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries,
+func UnmarshalTimeseries(data []byte) (timeseries.Timeseries,
 	error) {
 	if strings.Contains(strings.Replace(string(data), " ", "", -1),
 		`"version":"DF4"`) {
@@ -366,9 +367,9 @@ func (c *Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries,
 
 // UnmarshalInstantaneous is not used for IRONdb origins and is here to conform
 // to the Client interface.
-func (c *Client) UnmarshalInstantaneous(
+func UnmarshalInstantaneous(
 	data []byte) (timeseries.Timeseries, error) {
-	return c.UnmarshalTimeseries(data)
+	return UnmarshalTimeseries(data)
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries

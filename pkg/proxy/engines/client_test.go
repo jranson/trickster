@@ -17,9 +17,11 @@
 package engines
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -86,6 +88,7 @@ type TestClient struct {
 
 	handlers           map[string]http.Handler
 	handlersRegistered bool
+	modeler            timeseries.Modeler
 }
 
 func (c *TestClient) registerHandlers() {
@@ -427,8 +430,7 @@ type MatrixData struct {
 	Result     model.Matrix `json:"result"`
 }
 
-// MarshalTimeseries converts a Timeseries into a JSON blob
-func (c *TestClient) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
+func (c *TestClient) marshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
 	// Marshal the Envelope back to a json object for Cache Storage
 	if c.RangeCacheKey == "failkey" {
 		return nil, fmt.Errorf("generic failure for testing purposes (key: %s)", c.RangeCacheKey)
@@ -436,25 +438,37 @@ func (c *TestClient) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error)
 	return json.Marshal(ts)
 }
 
-// UnmarshalTimeseries converts a JSON blob into a Timeseries
-func (c *TestClient) UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
+func (c *TestClient) marshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+	// Marshal the Envelope back to a json object for Cache Storage
+	if c.RangeCacheKey == "failkey" {
+		return fmt.Errorf("generic failure for testing purposes (key: %s)", c.RangeCacheKey)
+	}
+
+	b, err := json.Marshal(ts)
+	if err != nil {
+		return err
+	}
+	buf := bytes.NewReader(b)
+	_, err = io.Copy(w, buf)
+	return err
+}
+
+func (c *TestClient) unmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	me := &MatrixEnvelope{}
 	err := json.Unmarshal(data, &me)
 	return me, err
 }
 
-// UnmarshalInstantaneous converts a JSON blob into an Instantaneous Data Point
-func (c *TestClient) UnmarshalInstantaneous(data []byte) (timeseries.Timeseries, error) {
+func (c *TestClient) unmarshalInstantaneous(data []byte) (timeseries.Timeseries, error) {
 	ve := &VectorEnvelope{}
 	err := json.Unmarshal(data, &ve)
 	if err != nil {
 		return nil, err
 	}
-	return ve.ToMatrix(), nil
+	return ve.toMatrix(), nil
 }
 
-// ToMatrix converts a VectorEnvelope to a MatrixEnvelope
-func (ve *VectorEnvelope) ToMatrix() *MatrixEnvelope {
+func (ve *VectorEnvelope) toMatrix() *MatrixEnvelope {
 	me := &MatrixEnvelope{}
 	me.Status = ve.Status
 	me.Data = MatrixData{
@@ -852,7 +866,9 @@ func (c *TestClient) HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *TestClient) QueryRangeHandler(w http.ResponseWriter, r *http.Request) {
 	r.URL = c.BuildUpstreamURL(r)
-	DeltaProxyCacheRequest(w, r)
+
+	m := timeseries.NewModeler(c.unmarshalTimeseries, c.marshalTimeseries, c.marshalTimeseriesWriter)
+	DeltaProxyCacheRequest(w, r, m)
 }
 
 func (c *TestClient) QueryHandler(w http.ResponseWriter, r *http.Request) {

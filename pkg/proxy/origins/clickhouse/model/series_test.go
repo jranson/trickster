@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package clickhouse
+package model
 
 import (
 	"reflect"

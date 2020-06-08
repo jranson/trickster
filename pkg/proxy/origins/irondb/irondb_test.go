@@ -22,7 +22,9 @@ import (
 	cr "github.com/tricksterproxy/trickster/pkg/cache/registration"
 	"github.com/tricksterproxy/trickster/pkg/config"
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins"
+	modeliron "github.com/tricksterproxy/trickster/pkg/proxy/origins/irondb/model"
 	oo "github.com/tricksterproxy/trickster/pkg/proxy/origins/options"
+	"github.com/tricksterproxy/trickster/pkg/timeseries"
 	tl "github.com/tricksterproxy/trickster/pkg/util/log"
 )
 
@@ -44,6 +46,9 @@ func TestIRONdbClientInterfacing(t *testing.T) {
 	}
 }
 
+var testModeler = timeseries.NewModeler(modeliron.UnmarshalTimeseries,
+	modeliron.MarshalTimeseries, modeliron.MarshalTimeseriesWriter)
+
 func TestNewClient(t *testing.T) {
 	conf, _, err := config.Load("trickster", "test",
 		[]string{"-origin-url", "http://example.com", "-origin-type", "TEST_CLIENT"})
@@ -59,7 +64,7 @@ func TestNewClient(t *testing.T) {
 	}
 
 	oc := &oo.Options{OriginType: "TEST_CLIENT"}
-	c, err := NewClient("default", oc, nil, cache)
+	c, err := NewClient("default", oc, nil, cache, testModeler)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,7 +129,7 @@ func TestRouter(t *testing.T) {
 
 func TestHTTPClient(t *testing.T) {
 	oc := &oo.Options{OriginType: "TEST"}
-	client, err := NewClient("test", oc, nil, nil)
+	client, err := NewClient("test", oc, nil, nil, testModeler)
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,7 +139,7 @@ func TestHTTPClient(t *testing.T) {
 }
 
 func TestSetCache(t *testing.T) {
-	c, err := NewClient("test", oo.NewOptions(), nil, nil)
+	c, err := NewClient("test", oo.NewOptions(), nil, nil, testModeler)
 	if err != nil {
 		t.Error(err)
 	}

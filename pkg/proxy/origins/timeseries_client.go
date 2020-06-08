@@ -17,7 +17,6 @@
 package origins
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/tricksterproxy/trickster/pkg/cache"
@@ -38,20 +37,21 @@ type TimeseriesClient interface {
 	Configuration() *oo.Options
 	// Name returns the name of the origin the Proxy Client is handling
 	Name() string
-	// FastForwardRequest returns an *http.Request crafted to collect Fast Forward
-	// data from the Origin, based on the provided HTTP Request
-	// If the inbound request is POST/PUT/PATCH, a non-nil body must be set with the query parameters,
-	// in lieu of updated url query values, in the returned request
+	// FastForwardRequest returns an *http.Request crafted to collect Fast Forward data
+	// from the Origin, based on the provided HTTP Request. If the inbound request is
+	// POST/PUT/PATCH, a Content-Type header and non-nil body with the query parameters
+	// must be set, in lieu of updated url query values, in the returned request
 	FastForwardRequest(*http.Request) (*http.Request, error)
 	// SetExtent will update an upstream request's timerange
 	// parameters based on the provided timeseries.Extent
 	SetExtent(*http.Request, *timeseries.TimeRangeQuery, *timeseries.Extent)
-	// UnmarshalTimeseries will return a Timeseries from the provided byte slice
-	UnmarshalTimeseries([]byte) (timeseries.Timeseries, error)
-	// MarshalTimeseries will return a byte slice from  the provided Timeseries
-	MarshalTimeseries(timeseries.Timeseries) ([]byte, error)
-	// MarshalTimeseriesWriter will write the marshaled bytes for the Timeseries to the provided writer
-	MarshalTimeseriesWriter(timeseries.Timeseries, io.Writer) error
+	// SetEncodingFuncs will set the encoders
+	// // UnmarshalTimeseries will return a Timeseries from the provided byte slice
+	// UnmarshalTimeseries([]byte) (timeseries.Timeseries, error)
+	// // MarshalTimeseries will return a byte slice from  the provided Timeseries
+	// MarshalTimeseries(timeseries.Timeseries) ([]byte, error)
+	// // MarshalTimeseriesWriter will write the marshaled bytes for the Timeseries to the provided writer
+	// MarshalTimeseriesWriter(timeseries.Timeseries, io.Writer) error
 	// HTTPClient will return the HTTP Client for this Origin
 	HTTPClient() *http.Client
 	// SetCache sets the Cache object the client will use when caching origin content

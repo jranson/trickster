@@ -30,9 +30,13 @@ import (
 	pe "github.com/tricksterproxy/trickster/pkg/proxy/errors"
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins"
 	oo "github.com/tricksterproxy/trickster/pkg/proxy/origins/options"
+	"github.com/tricksterproxy/trickster/pkg/proxy/origins/prometheus/model"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
 	tl "github.com/tricksterproxy/trickster/pkg/util/log"
 )
+
+var testModeler = timeseries.NewModeler(model.UnmarshalTimeseries,
+	model.MarshalTimeseries, model.MarshalTimeseriesWriter)
 
 func TestPrometheusClientInterfacing(t *testing.T) {
 
@@ -67,7 +71,7 @@ func TestNewClient(t *testing.T) {
 	}
 
 	oc := &oo.Options{OriginType: "TEST_CLIENT"}
-	c, err := NewClient("default", oc, nil, cache)
+	c, err := NewClient("default", oc, nil, cache, testModeler)
 	if err != nil {
 		t.Error(err)
 	}
@@ -127,7 +131,7 @@ func TestConfiguration(t *testing.T) {
 func TestHTTPClient(t *testing.T) {
 	oc := &oo.Options{OriginType: "TEST"}
 
-	client, err := NewClient("test", oc, nil, nil)
+	client, err := NewClient("test", oc, nil, nil, testModeler)
 	if err != nil {
 		t.Error(err)
 	}
@@ -405,7 +409,7 @@ func TestParseTimeRangeQueryWithOffset(t *testing.T) {
 }
 
 func TestSetCache(t *testing.T) {
-	c, err := NewClient("test", oo.NewOptions(), nil, nil)
+	c, err := NewClient("test", oo.NewOptions(), nil, nil, testModeler)
 	if err != nil {
 		t.Error(err)
 	}
@@ -416,7 +420,7 @@ func TestSetCache(t *testing.T) {
 }
 
 func TestRouter(t *testing.T) {
-	c, err := NewClient("test", oo.NewOptions(), nil, nil)
+	c, err := NewClient("test", oo.NewOptions(), nil, nil, testModeler)
 	if err != nil {
 		t.Error(err)
 	}

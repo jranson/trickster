@@ -879,14 +879,14 @@ func TestDeltaProxyCacheRequestFastForward(t *testing.T) {
 		int(step.Seconds()), extr.Start.Unix(), extr.End.Unix(), queryReturnsOKNoLatency)
 
 	expectedMatrix, _, _ := mockprom.GetTimeSeriesData(queryReturnsOKNoLatency, extn.Start, extn.End, step)
-	em, err := client.UnmarshalTimeseries([]byte(expectedMatrix))
+	em, err := client.unmarshalTimeseries([]byte(expectedMatrix))
 	if err != nil {
 		t.Error(err)
 	}
 	em.SetExtents(timeseries.ExtentList{extn})
 
 	expectedVector, _, _ := mockprom.GetInstantData(queryReturnsOKNoLatency, client.fftime)
-	ev, err := client.UnmarshalInstantaneous([]byte(expectedVector))
+	ev, err := client.unmarshalInstantaneous([]byte(expectedVector))
 	if err != nil {
 		t.Error(err)
 	}
@@ -898,7 +898,7 @@ func TestDeltaProxyCacheRequestFastForward(t *testing.T) {
 	}
 
 	em.SetExtents(nil)
-	b, err := client.MarshalTimeseries(em)
+	b, err := client.marshalTimeseries(em)
 	if err != nil {
 		t.Error(err)
 	}
@@ -1317,7 +1317,7 @@ func TestDeltaProxyCacheRequestCacheMissUnmarshalFailed(t *testing.T) {
 		t.Error(err)
 	}
 
-	_, err = client.UnmarshalTimeseries(body)
+	_, err = client.unmarshalTimeseries(body)
 	if err == nil {
 		t.Errorf("expected unmarshaling error for %s", string(body))
 	}

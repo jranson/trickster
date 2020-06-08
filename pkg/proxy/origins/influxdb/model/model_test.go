@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package influxdb
+package model
 
 import (
 	"testing"
@@ -56,8 +56,7 @@ func TestMarshalTimeseries(t *testing.T) {
 	expected := `{"results":[{"statement_id":0,"series":[{"name":"a","tags":{"tagName1":"tagValue1"},` +
 		`"columns":["time","units"],"values":[[1000,1.5],[5000,1.5],[10000,1.5]]},{"name":"b",` +
 		`"tags":{"tagName2":"tagValue2"},"columns":["time","units"],"values":[[1000,2.5],[5000,2.1],[10000,2.4]]}]}]}`
-	client := &Client{}
-	bytes, err := client.MarshalTimeseries(se)
+	bytes, err := MarshalTimeseries(se)
 	if err != nil {
 		t.Error(err)
 		return
@@ -74,8 +73,7 @@ func TestUnmarshalTimeseries(t *testing.T) {
 	bytes := []byte(`{"results":[{"statement_id":0,"series":[{"name":"a","tags":{"tagName1":"tagValue1"},` +
 		`"columns":["time","units"],"values":[[1000,1.5],[5000,1.5],[10000,1.5]]},{"name":"b",` +
 		`"tags":{"tagName2":"tagValue2"},"columns":["time","units"],"values":[[1000,2.5],[5000,2.1],[10000,2.4]]}]}]}`)
-	client := &Client{}
-	ts, err := client.UnmarshalTimeseries(bytes)
+	ts, err := UnmarshalTimeseries(bytes)
 	if err != nil {
 		t.Error(err)
 		return

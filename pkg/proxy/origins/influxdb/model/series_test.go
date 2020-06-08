@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package influxdb
+package model
 
 import (
 	"reflect"

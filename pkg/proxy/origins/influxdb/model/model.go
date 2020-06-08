@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package influxdb
+package model
 
 import (
 	"bytes"
@@ -52,14 +52,14 @@ type Result struct {
 }
 
 // MarshalTimeseries converts a Timeseries into a JSON blob
-func (c *Client) MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
+func MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
-	err := c.MarshalTimeseriesWriter(ts, buf)
+	err := MarshalTimeseriesWriter(ts, buf)
 	return buf.Bytes(), err
 }
 
 // MarshalTimeseriesWriter converts a Timeseries into a JSON blob via an io.Writer
-func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
+func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 	b, err := json.Marshal(ts)
 	if err != nil {
 		return err
@@ -69,7 +69,7 @@ func (c *Client) MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) 
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
-func (c *Client) UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
+func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	se := &SeriesEnvelope{}
 	err := json.Unmarshal(data, se)
 	return se, err

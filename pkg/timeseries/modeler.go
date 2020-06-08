@@ -14,18 +14,21 @@
  * limitations under the License.
  */
 
-package prometheus
+package timeseries
 
-import (
-	"net/http"
+import "io"
 
-	"github.com/tricksterproxy/trickster/pkg/proxy/engines"
-	"github.com/tricksterproxy/trickster/pkg/proxy/urls"
-)
+// Modeler is a container object for Timeseries marshaling operations
+type Modeler struct {
+	Unmarshaler   UnmarshalerFunc
+	Marshaler     MarshalerFunc
+	MarshalWriter MarshalWriterFunc
+}
 
-// QueryRangeHandler handles timeseries requests for
-// Prometheus and processes them through the delta proxy cache
-func (c *Client) QueryRangeHandler(w http.ResponseWriter, r *http.Request) {
-	r.URL = urls.BuildUpstreamURL(r, c.baseUpstreamURL)
-	engines.DeltaProxyCacheRequest(w, r, c.modeler)
+type UnmarshalerFunc func([]byte) (Timeseries, error)
+type MarshalerFunc func(Timeseries) ([]byte, error)
+type MarshalWriterFunc func(Timeseries, io.Writer) error
+
+func NewModeler(u UnmarshalerFunc, m MarshalerFunc, mw MarshalWriterFunc) *Modeler {
+	return &Modeler{Unmarshaler: u, Marshaler: m, MarshalWriter: mw}
 }

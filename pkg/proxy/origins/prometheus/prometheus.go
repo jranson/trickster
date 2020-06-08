@@ -78,15 +78,16 @@ type Client struct {
 	healthHeaders      http.Header
 	healthMethod       string
 	router             http.Handler
+	modeler            *timeseries.Modeler
 }
 
 // NewClient returns a new Client Instance
 func NewClient(name string, oc *oo.Options, router http.Handler,
-	cache cache.Cache) (origins.Client, error) {
+	cache cache.Cache, modeler *timeseries.Modeler) (origins.Client, error) {
 	c, err := proxy.NewHTTPClient(oc)
 	bur := urls.FromParts(oc.Scheme, oc.Host, oc.PathPrefix, "", "")
 	return &Client{name: name, config: oc, router: router, cache: cache,
-		webClient: c, baseUpstreamURL: bur}, err
+		webClient: c, baseUpstreamURL: bur, modeler: modeler}, err
 }
 
 // SetCache sets the Cache object the client will use for caching origin content

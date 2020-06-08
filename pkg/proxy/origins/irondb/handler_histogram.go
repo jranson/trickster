@@ -27,6 +27,7 @@ import (
 
 	"github.com/tricksterproxy/trickster/pkg/proxy/engines"
 	"github.com/tricksterproxy/trickster/pkg/proxy/errors"
+	"github.com/tricksterproxy/trickster/pkg/proxy/origins/irondb/common"
 	"github.com/tricksterproxy/trickster/pkg/proxy/request"
 	"github.com/tricksterproxy/trickster/pkg/proxy/urls"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
@@ -37,7 +38,7 @@ import (
 // them through the delta proxy cache.
 func (c *Client) HistogramHandler(w http.ResponseWriter, r *http.Request) {
 	r.URL = urls.BuildUpstreamURL(r, c.baseUpstreamURL)
-	engines.DeltaProxyCacheRequest(w, r)
+	engines.DeltaProxyCacheRequest(w, r, c.modeler)
 }
 
 // histogramHandlerSetExtent will change the upstream request query to use the
@@ -75,7 +76,7 @@ func (c *Client) histogramHandlerSetExtent(r *http.Request,
 	r.URL.Path = sb.String()
 }
 
-// histogramHandlerParseTimeRangeQuery parses the key parts of a TimeRangeQuery
+// histogramHandlerParseTimeRangeQuerycommon.Parses the key parts of a TimeRangeQuery
 // from the inbound HTTP Request.
 func (c *Client) histogramHandlerParseTimeRangeQuery(
 	r *http.Request) (*timeseries.TimeRangeQuery, error) {
@@ -97,15 +98,15 @@ func (c *Client) histogramHandlerParseTimeRangeQuery(
 	trq.Statement = "/histogram/" + strings.Join(ps[4:], "/")
 
 	var err error
-	if trq.Extent.Start, err = parseTimestamp(ps[1]); err != nil {
+	if trq.Extent.Start, err = common.ParseTimestamp(ps[1]); err != nil {
 		return nil, err
 	}
 
-	if trq.Extent.End, err = parseTimestamp(ps[2]); err != nil {
+	if trq.Extent.End, err = common.ParseTimestamp(ps[2]); err != nil {
 		return nil, err
 	}
 
-	if trq.Step, err = parseDuration(ps[3]); err != nil {
+	if trq.Step, err = common.ParseDuration(ps[3]); err != nil {
 		return nil, err
 	}
 
