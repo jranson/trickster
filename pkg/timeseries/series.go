@@ -66,9 +66,9 @@ func (sh *SeriesHeader) CalculateHash() {
 	hash := fnv.NewInlineFNV64a()
 	hash.Write([]byte(sh.Name))
 	hash.Write([]byte(sh.QueryStatement))
-	for k, v := range sh.Tags {
+	for _, k := range sh.Tags.Keys() {
 		hash.Write([]byte(k))
-		hash.Write([]byte(v))
+		hash.Write([]byte(sh.Tags[k]))
 	}
 	for _, fd := range sh.FieldsList {
 		hash.Write([]byte(fd.Name))
@@ -97,6 +97,18 @@ func (sh *SeriesHeader) Clone() *SeriesHeader {
 		clone.FieldsLookup[fd.Name] = clone.FieldsList[i]
 	}
 	return clone
+}
+
+// Size returns the memory utilization of the Series in bytes
+func (s *Series) Size() int {
+	c := 8
+	if s.Header != nil {
+		c += s.Header.Size
+	}
+	if s.Points != nil {
+		c += s.Points.Size()
+	}
+	return c
 }
 
 // Clone returns a perfect, new copy of the Series

@@ -73,49 +73,6 @@ func (trq *TimeRangeQuery) NormalizeExtent() {
 	}
 }
 
-// CalculateDeltas provides a list of extents that are not in a cached timeseries,
-// when provided a list of extents that are cached.
-func CalculateDeltas(have ExtentList, want Extent, step time.Duration) ExtentList {
-	if len(have) == 0 {
-		return ExtentList{want}
-	}
-	misCap := want.End.Sub(want.Start) / step
-	if misCap < 0 {
-		misCap = 0
-	}
-	misses := make([]time.Time, 0, misCap)
-	for i := want.Start; !want.End.Before(i); i = i.Add(step) {
-		found := false
-		for j := range have {
-			if j == 0 && i.Before(have[j].Start) {
-				// our earliest datapoint in cache is after the first point the user wants
-				break
-			}
-			if i.Equal(have[j].Start) || i.Equal(have[j].End) || (i.After(have[j].Start) && have[j].End.After(i)) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			misses = append(misses, i)
-		}
-	}
-	// Find the fill and gap ranges
-	ins := ExtentList{}
-	var inStart = time.Time{}
-	l := len(misses)
-	for i := range misses {
-		if inStart.IsZero() {
-			inStart = misses[i]
-		}
-		if i+1 == l || !misses[i+1].Equal(misses[i].Add(step)) {
-			ins = append(ins, Extent{Start: inStart, End: misses[i]})
-			inStart = time.Time{}
-		}
-	}
-	return ins
-}
-
 func (trq *TimeRangeQuery) String() string {
 	return fmt.Sprintf(`{ "statement": "%s", "step": "%s", "extent": "%s" }`,
 		strings.Replace(trq.Statement, `"`, `\"`, -1), trq.Step.String(), trq.Extent.String())

@@ -52,6 +52,15 @@ func (p *Point) Clone() *Point {
 	return clone
 }
 
+// Size returns the memory utilization of the Points in bytes
+func (p Points) Size() int {
+	var c int
+	for _, pt := range p {
+		c += pt.Size
+	}
+	return c
+}
+
 // Clone returns a perfect copy of the Points
 func (p Points) Clone(sh *SeriesHeader) Points {
 	clone := make(Points, len(p))

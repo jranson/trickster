@@ -29,6 +29,15 @@ type Result struct {
 	SeriesLookup SeriesLookup
 }
 
+// Size returns the size of the Result in bytes
+func (r *Result) Size() int {
+	c := 4 + (16 * len(r.SeriesLookup)) + (8 * len(r.SeriesList))
+	for _, s := range r.SeriesList {
+		c += s.Size()
+	}
+	return c
+}
+
 // Hashes returns the ordered list of Hashes for the SeriesList in the Result
 func (r *Result) Hashes() Hashes {
 	if len(r.SeriesList) == 0 {
