@@ -17,6 +17,7 @@
 package engines
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"sync"
@@ -136,7 +137,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 			h := doc.SafeHeaderClone()
 			recordDPCResult(r, status.LookupStatusProxyError, doc.StatusCode,
 				r.URL.Path, "", elapsed.Seconds(), nil, h)
-			Respond(w, doc.StatusCode, h, doc.Body)
+			Respond(w, doc.StatusCode, h, bytes.NewReader(doc.Body))
 			return // fetchTimeseries logs the error
 		}
 	} else {
@@ -148,7 +149,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 				h := doc.SafeHeaderClone()
 				recordDPCResult(r, status.LookupStatusProxyError, doc.StatusCode,
 					r.URL.Path, "", elapsed.Seconds(), nil, h)
-				Respond(w, doc.StatusCode, h, doc.Body)
+				Respond(w, doc.StatusCode, h, bytes.NewReader(doc.Body))
 				return // fetchTimeseries logs the error
 			}
 		} else {
@@ -172,7 +173,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 					h := doc.SafeHeaderClone()
 					recordDPCResult(r, status.LookupStatusProxyError, doc.StatusCode,
 						r.URL.Path, "", elapsed.Seconds(), nil, h)
-					Respond(w, doc.StatusCode, h, doc.Body)
+					Respond(w, doc.StatusCode, h, bytes.NewReader(doc.Body))
 					return // fetchTimeseries logs the error
 				}
 			} else {
@@ -451,7 +452,6 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	rts.SetExtents(nil) // so they are not included in the client response json
 	rts.SetStep(0)
-	rdata, err := client.MarshalTimeseries(rts)
 	rh := doc.SafeHeaderClone()
 	sc := doc.StatusCode
 
@@ -459,7 +459,8 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request) {
 	// so as to not map conflict with cacheData on WriteCache
 	logDeltaRoutine(pr.Logger, dpStatus)
 	recordDPCResult(r, cacheStatus, sc, r.URL.Path, ffStatus, elapsed.Seconds(), missRanges, rh)
-	Respond(w, sc, rh, rdata)
+	Respond(w, sc, rh, nil)
+	client.MarshalTimeseriesWriter(rts, w)
 }
 
 func logDeltaRoutine(log *tl.Logger, p tl.Pairs) { log.Debug("delta routine completed", p) }
