@@ -381,10 +381,9 @@ func TestUnmarshalDF4Timeseries(t *testing.T) {
 func TestSize(t *testing.T) {
 
 	s, _ := UnmarshalTimeseries([]byte(testDF4Response))
-	expected := 136
 
-	if s.Size() != expected {
-		t.Errorf("expected %d got %d", expected, s.Size())
+	if s.Size() != 136 {
+		t.Errorf("expected %d got %d", 136, s.Size())
 	}
 
 }

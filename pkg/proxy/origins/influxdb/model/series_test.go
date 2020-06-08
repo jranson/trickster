@@ -1704,10 +1704,9 @@ func TestSize(t *testing.T) {
 	}
 
 	i := s.Size()
-	expected := 226
 
-	if i != expected {
-		t.Errorf("expected %d got %d", expected, i)
+	if i != 226 {
+		t.Errorf("expected %d got %d", 226, i)
 	}
 
 }

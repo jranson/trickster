@@ -201,8 +201,8 @@ func (se *SeriesEnvelope) SeriesCount() int {
 
 // ValueCount returns the count of all data values across all Series in the
 // Timeseries value.
-func (se *SeriesEnvelope) ValueCount() int {
-	return len(se.Data)
+func (se *SeriesEnvelope) ValueCount() int64 {
+	return int64(len(se.Data))
 }
 
 // TimestampCount returns the number of unique timestamps across the timeseries.
@@ -378,9 +378,9 @@ func UnmarshalInstantaneous(
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries
-func (se *SeriesEnvelope) Size() int {
-	c := len(se.Data)*36 + // time.Time (24) + Step (4) + Value (8)
-		(len(se.ExtentList) * 72) + // time.Time (24) * 3
+func (se *SeriesEnvelope) Size() int64 {
+	c := int64(len(se.Data)*36) + // time.Time (24) + Step (4) + Value (8)
+		int64(len(se.ExtentList)*72) + // time.Time (24) * 3
 		24 // .StepDuration
 	return c
 }

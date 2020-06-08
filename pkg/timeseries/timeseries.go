@@ -52,9 +52,9 @@ type Timeseries interface {
 	// SeriesCount returns the number of individual Series in the Timeseries object
 	SeriesCount() int
 	// ValueCount returns the count of all values across all Series in the Timeseries object
-	ValueCount() int
+	ValueCount() int64
 	// Size returns the approximate memory byte size of the timeseries object
-	Size() int
+	Size() int64
 	// SetTimeRangeQuery sets the TimeRangeQuery associated with the Timeseries
 	SetTimeRangeQuery(*TimeRangeQuery)
 }

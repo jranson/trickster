@@ -76,10 +76,10 @@ func (se *DF4SeriesEnvelope) SeriesCount() int {
 
 // ValueCount returns the count of all data values across all Series in the
 // Timeseries value.
-func (se *DF4SeriesEnvelope) ValueCount() int {
-	n := 0
+func (se *DF4SeriesEnvelope) ValueCount() int64 {
+	var n int64
 	for _, v := range se.Data {
-		n += len(v)
+		n += int64(len(v))
 	}
 
 	return n
@@ -330,9 +330,9 @@ func (se *DF4SeriesEnvelope) Sort() {
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries
-func (se *DF4SeriesEnvelope) Size() int {
+func (se *DF4SeriesEnvelope) Size() int64 {
 	wg := sync.WaitGroup{}
-	c := uint64(len(se.Ver) +
+	c := int64(len(se.Ver) +
 		24 + // .Head
 		24 + // .StepDuration
 		se.ExtentList.Size(),
@@ -341,7 +341,7 @@ func (se *DF4SeriesEnvelope) Size() int {
 		wg.Add(1)
 		go func(j int) {
 			for k := range se.Meta[j] {
-				atomic.AddUint64(&c, uint64(len(k)+8)) // + approximate Meta Value size (8)
+				atomic.AddInt64(&c, int64(len(k)+8)) // + approximate Meta Value size (8)
 			}
 			wg.Done()
 		}(i)
@@ -349,10 +349,10 @@ func (se *DF4SeriesEnvelope) Size() int {
 	for i := range se.Data {
 		wg.Add(1)
 		go func(s []interface{}) {
-			atomic.AddUint64(&c, uint64(len(s)*16)) // + approximate data value size
+			atomic.AddInt64(&c, int64(len(s)*16)) // + approximate data value size
 			wg.Done()
 		}(se.Data[i])
 	}
 	wg.Wait()
-	return int(c)
+	return c
 }

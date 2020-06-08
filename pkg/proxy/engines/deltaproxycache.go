@@ -295,7 +295,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 	mts := make([]timeseries.Timeseries, 0, len(missRanges))
 	wg := sync.WaitGroup{}
 	appendLock := sync.Mutex{}
-	uncachedValueCount := 0
+	var uncachedValueCount int64
 
 	// iterate each time range that the client needs and fetch from the upstream origin
 	for i := range missRanges {

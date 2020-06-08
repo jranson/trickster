@@ -507,27 +507,24 @@ func (re *ResultsEnvelope) SeriesCount() int {
 }
 
 // ValueCount returns the count of all values across all Series in the Timeseries object
-func (re *ResultsEnvelope) ValueCount() int {
-	c := 0
+func (re *ResultsEnvelope) ValueCount() int64 {
+	var c int64
 	wg := sync.WaitGroup{}
-	mtx := sync.Mutex{}
 	for i := range re.Data {
 		wg.Add(1)
-		go func(j int) {
-			mtx.Lock()
-			c += j
-			mtx.Unlock()
+		go func(j int64) {
+			atomic.AddInt64(&c, j)
 			wg.Done()
-		}(len(re.Data[i].Points))
+		}(int64(len(re.Data[i].Points)))
 	}
 	wg.Wait()
 	return c
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries
-func (re *ResultsEnvelope) Size() int {
+func (re *ResultsEnvelope) Size() int64 {
 	wg := sync.WaitGroup{}
-	c := uint64(24 + // .stepDuration
+	c := int64(24 + // .stepDuration
 		(25 * len(re.timestamps)) + // time.Time (24) + bool(1)
 		(24 * len(re.tslist)) + // time.Time (24)
 		(len(re.ExtentList) * 72) + // time.Time (24) * 3
@@ -536,30 +533,30 @@ func (re *ResultsEnvelope) Size() int {
 	for i := range re.Meta {
 		wg.Add(1)
 		go func(j int) {
-			atomic.AddUint64(&c, uint64(len(re.Meta[j].Name)+len(re.Meta[j].Type)))
+			atomic.AddInt64(&c, int64(len(re.Meta[j].Name)+len(re.Meta[j].Type)))
 			wg.Done()
 		}(i)
 	}
 	for _, s := range re.SeriesOrder {
 		wg.Add(1)
 		go func(t string) {
-			atomic.AddUint64(&c, uint64(len(t)))
+			atomic.AddInt64(&c, int64(len(t)))
 			wg.Done()
 		}(s)
 	}
 	for k, v := range re.Data {
-		atomic.AddUint64(&c, uint64(len(k)))
+		atomic.AddInt64(&c, int64(len(k)))
 		wg.Add(1)
 		go func(d *DataSet) {
-			atomic.AddUint64(&c, uint64(len(d.Points)*32))
+			atomic.AddInt64(&c, int64(len(d.Points)*32))
 			for mk := range d.Metric {
-				atomic.AddUint64(&c, uint64(len(mk)+8)) // + approx len of value (interface)
+				atomic.AddInt64(&c, int64(len(mk)+8)) // + approx len of value (interface)
 			}
 			wg.Done()
 		}(v)
 	}
 	wg.Wait()
-	return int(c)
+	return c
 }
 
 // Parts ...
@@ -624,7 +621,7 @@ func (re ResultsEnvelope) MarshalJSON() ([]byte, error) {
 	rsp := &Response{
 		Meta:         re.Meta,
 		RawData:      make([]ResponseValue, 0, fl),
-		Rows:         re.ValueCount(),
+		Rows:         int(re.ValueCount()),
 		StepDuration: re.Step(),
 		ExtentList:   re.ExtentList,
 	}

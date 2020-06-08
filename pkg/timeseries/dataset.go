@@ -364,8 +364,8 @@ func (ds *DataSet) SeriesCount() int {
 }
 
 // ValueCount returns the count of all values across all Series in the DataSet
-func (ds *DataSet) ValueCount() int {
-	var cnt int
+func (ds *DataSet) ValueCount() int64 {
+	var cnt int64
 	for _, r := range ds.Results {
 		if r == nil || len(r.SeriesList) == 0 {
 			continue
@@ -374,28 +374,28 @@ func (ds *DataSet) ValueCount() int {
 			if s == nil {
 				continue
 			}
-			cnt += len(s.Points)
+			cnt += int64(len(s.Points))
 		}
 	}
 	return cnt
 }
 
 // Size returns the memory utilization in bytes of the DataSet
-func (ds *DataSet) Size() int {
-	c := len(ds.Status) +
+func (ds *DataSet) Size() int64 {
+	c := int64(len(ds.Status) +
 		49 + // StepDuration=8 Mutex=8 OutputFormat=1 4xFuncs=32
 		(len(ds.ExtentList) * 72) +
-		(len(ds.PointsLookup) * 16)
+		(len(ds.PointsLookup) * 16))
 	if ds.Error != nil {
-		c += len(ds.Error.Error())
+		c += int64(len(ds.Error.Error()))
 	}
 	for _, r := range ds.Results {
 		if r == nil {
 			continue
 		}
-		c += r.Size()
+		c += int64(r.Size())
 	}
-	c += len(ds.PointsLookup) * (ds.SeriesCount() * 16)
+	c += int64(len(ds.PointsLookup) * (ds.SeriesCount() * 16))
 	return c
 }
 

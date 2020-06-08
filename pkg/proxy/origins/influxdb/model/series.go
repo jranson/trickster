@@ -68,11 +68,11 @@ func (se *SeriesEnvelope) Extents() timeseries.ExtentList {
 }
 
 // ValueCount returns the count of all values across all series in the Timeseries
-func (se *SeriesEnvelope) ValueCount() int {
-	c := 0
+func (se *SeriesEnvelope) ValueCount() int64 {
+	var c int64
 	for i := range se.Results {
 		for j := range se.Results[i].Series {
-			c += len(se.Results[i].Series[j].Values)
+			c += int64(len(se.Results[i].Series[j].Values))
 		}
 	}
 	return c
@@ -511,8 +511,8 @@ func (se *SeriesEnvelope) Sort() {
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries
-func (se *SeriesEnvelope) Size() int {
-	c := uint64(24 + // .stepDuration
+func (se *SeriesEnvelope) Size() int64 {
+	c := int64(24 + // .stepDuration
 		len(se.Err) +
 		se.ExtentList.Size() + // time.Time (24) * 3
 		(25 * len(se.timestamps)) + // time.Time (24) + bool(1)
@@ -521,22 +521,22 @@ func (se *SeriesEnvelope) Size() int {
 	)
 	wg := sync.WaitGroup{}
 	for i, res := range se.Results {
-		atomic.AddUint64(&c, uint64(8+len(res.Err))) // .StatementID
+		atomic.AddInt64(&c, int64(8+len(res.Err))) // .StatementID
 		for j := range res.Series {
 			wg.Add(1)
 			go func(r models.Row) {
-				atomic.AddUint64(&c, uint64(len(r.Name)+1)) // .Partial
+				atomic.AddInt64(&c, int64(len(r.Name)+1)) // .Partial
 				for k, v := range r.Tags {
-					atomic.AddUint64(&c, uint64(len(k)+len(v)))
+					atomic.AddInt64(&c, int64(len(k)+len(v)))
 				}
 				for _, v := range r.Columns {
-					atomic.AddUint64(&c, uint64(len(v)))
+					atomic.AddInt64(&c, int64(len(v)))
 				}
-				atomic.AddUint64(&c, 32) // size of timestamp (24) + approximate value size (8)
+				atomic.AddInt64(&c, 32) // size of timestamp (24) + approximate value size (8)
 				wg.Done()
 			}(se.Results[i].Series[j])
 		}
 	}
 	wg.Wait()
-	return int(c)
+	return c
 }

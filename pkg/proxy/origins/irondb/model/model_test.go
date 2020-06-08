@@ -477,11 +477,10 @@ func TestTSSize(t *testing.T) {
 
 	s, _ := UnmarshalTimeseries(bytes)
 
-	expected := 96
 	size := s.Size()
 
-	if size != expected {
-		t.Errorf("expected %d got %d", expected, size)
+	if size != 96 {
+		t.Errorf("expected %d got %d", 96, size)
 	}
 
 }

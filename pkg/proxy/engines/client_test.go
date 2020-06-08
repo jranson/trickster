@@ -852,18 +852,15 @@ func (me *MatrixEnvelope) SeriesCount() int {
 }
 
 // ValueCount returns the count of all values across all Series in the Timeseries object
-func (me *MatrixEnvelope) ValueCount() int {
-	c := 0
+func (me *MatrixEnvelope) ValueCount() int64 {
+	var c int64
 	wg := sync.WaitGroup{}
-	mtx := sync.Mutex{}
 	for i := range me.Data.Result {
 		wg.Add(1)
-		go func(j int) {
-			mtx.Lock()
-			c += j
-			mtx.Unlock()
+		go func(j int64) {
+			atomic.AddInt64(&c, j)
 			wg.Done()
-		}(len(me.Data.Result[i].Values))
+		}(int64(len(me.Data.Result[i].Values)))
 	}
 	wg.Wait()
 	return c
@@ -937,9 +934,9 @@ func testStringMatch(have, expected string) error {
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries
-func (me *MatrixEnvelope) Size() int {
+func (me *MatrixEnvelope) Size() int64 {
 	wg := sync.WaitGroup{}
-	c := uint64(len(me.Status) +
+	c := int64(len(me.Status) +
 		me.ExtentList.Size() +
 		24 + // me.StepDuration
 		(25 * len(me.timestamps)) +
@@ -949,10 +946,10 @@ func (me *MatrixEnvelope) Size() int {
 	for i := range me.Data.Result {
 		wg.Add(1)
 		go func(s *model.SampleStream) {
-			atomic.AddUint64(&c, uint64((len(s.Values)*32)+len(s.Metric.String())))
+			atomic.AddInt64(&c, int64((len(s.Values)*32)+len(s.Metric.String())))
 			wg.Done()
 		}(me.Data.Result[i])
 	}
 	wg.Wait()
-	return int(c)
+	return c
 }
