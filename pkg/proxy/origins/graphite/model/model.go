@@ -60,6 +60,9 @@ func marshalTimeseriesRaw(ds *timeseries.DataSet, w io.Writer) error {
 		return nil
 	}
 	for _, s := range ds.Results[0].SeriesList {
+		if s == nil {
+			continue
+		}
 		w.Write([]byte(s.Header.Name + "," +
 			strconv.FormatInt(ds.ExtentList[0].Start.Unix(), 10) + "," +
 			strconv.FormatInt(ds.ExtentList[0].End.Unix(), 10) + "," +
@@ -87,6 +90,9 @@ func marshalTimeseriesJSON(ds *timeseries.DataSet, w io.Writer) error {
 	w.Write([]byte("["))
 	sep2 := ""
 	for _, s := range ds.Results[0].SeriesList {
+		if s == nil {
+			continue
+		}
 		w.Write([]byte(sep2 + "{\n  \"target\": \"" + s.Header.Name + "\",\n  \"datapoints\": [\n"))
 		sep := ","
 		for i, v := range s.Points {

@@ -398,6 +398,10 @@ func (ds *DataSet) Sort() {
 func UnmarshalDataSet(b []byte) (Timeseries, error) {
 	ds := &DataSet{}
 	_, err := ds.UnmarshalMsg(b)
+	if err == nil && ds.TimeRangeQuery != nil {
+		ds.TimeRangeQuery.Step = time.Duration(ds.TimeRangeQuery.StepNS)
+	}
+
 	return ds, err
 }
 
@@ -406,6 +410,9 @@ func MarshalDataSet(ts Timeseries) ([]byte, error) {
 	ds, ok := ts.(*DataSet)
 	if !ok {
 		return nil, ErrUnknownFormat
+	}
+	if ds.TimeRangeQuery != nil {
+		ds.TimeRangeQuery.StepNS = ds.TimeRangeQuery.Step.Nanoseconds()
 	}
 	return ds.MarshalMsg(nil)
 }

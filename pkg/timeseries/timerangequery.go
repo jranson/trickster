@@ -45,7 +45,7 @@ type TimeRangeQuery struct {
 	// IsOffset is true if the query uses a relative offset modifier
 	IsOffset bool `msg:"-"`
 	// StepNS is the nanosecond representation for Step
-	StepNS int64 `mst:"step"`
+	StepNS int64 `msg:"step"`
 }
 
 // Clone returns an exact copy of a TimeRangeQuery
@@ -53,6 +53,7 @@ func (trq *TimeRangeQuery) Clone() *TimeRangeQuery {
 	t := &TimeRangeQuery{
 		Statement:          trq.Statement,
 		Step:               trq.Step,
+		StepNS:             trq.StepNS,
 		Extent:             Extent{Start: trq.Extent.Start, End: trq.Extent.End},
 		IsOffset:           trq.IsOffset,
 		TimestampFieldName: trq.TimestampFieldName,
