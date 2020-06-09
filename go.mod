@@ -19,7 +19,6 @@ require (
 	github.com/onsi/ginkgo v1.10.1 // indirect
 	github.com/onsi/gomega v1.7.0 // indirect
 	github.com/prometheus/client_golang v1.5.0
-	github.com/prometheus/common v0.9.1
 	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/tinylib/msgp v1.1.1
 	github.com/tricksterproxy/mockster v1.1.1
