@@ -16,7 +16,7 @@
 
 //go:generate msgp
 
-package timeseries
+package dataset
 
 // Result represents the results of a single query statement in the DataSet
 type Result struct {

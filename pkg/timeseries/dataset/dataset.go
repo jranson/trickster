@@ -16,13 +16,15 @@
 
 //go:generate msgp
 
-package timeseries
+package dataset
 
 import (
 	"io"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/tricksterproxy/trickster/pkg/timeseries"
 )
 
 // DataSet is the Common Time Series Format that Trickster uses to
@@ -32,7 +34,7 @@ type DataSet struct {
 	// Status is the optional status indicator for the DataSet
 	Status string `msg:"status"`
 	// ExtentList is the list of Extents (time ranges) represented in the Results
-	ExtentList ExtentList `msg:"extent_list"`
+	ExtentList timeseries.ExtentList `msg:"extent_list"`
 	// // Timestamps is map of all timestamps in the DataSet
 	// Timestamps map[Epoch]bool `msg:"timestamps"`
 	// Results is the list of type Result. Each Result represents information about a
@@ -43,15 +45,15 @@ type DataSet struct {
 	// Error is a container for any DataSet-level Errors
 	Error string `msg:"error"`
 	// TimeRangeQuery is the trq associated with the Timeseries
-	TimeRangeQuery *TimeRangeQuery `msg:"trq"`
+	TimeRangeQuery *timeseries.TimeRangeQuery `msg:"trq"`
 	// Sorter is the DataSet's Sort function, which defaults to DefaultSort
 	Sorter func() `msg:"-"`
 	// Merger is the DataSet's Merge function, which defaults to DefaultMerge
-	Merger func(sortSeries bool, ts ...Timeseries) `msg:"-"`
+	Merger func(sortSeries bool, ts ...timeseries.Timeseries) `msg:"-"`
 	// SizeCropper is the DataSet's CropToSize function, whcih defauls to DefautlSizeCropper
-	SizeCropper func(int, time.Time, Extent) `msg:"-"`
+	SizeCropper func(int, time.Time, timeseries.Extent) `msg:"-"`
 	// RangeCropper is the DataSet's CropToRange function, whcih defauls to DefautlRangeCropper
-	RangeCropper func(Extent) `msg:"-"`
+	RangeCropper func(timeseries.Extent) `msg:"-"`
 	// OutputFormat is bit representing the desired output format of the DataSet; it's actual
 	// implementation of values is fully federated to the underlying Time Series origin package
 	OutputFormat byte `msg:"output_format"`
@@ -61,7 +63,7 @@ type DataSet struct {
 type Marshaler func(*DataSet, io.Writer) error
 
 // Clone returns a new, perfect copy of the DataSet
-func (ds *DataSet) Clone() Timeseries {
+func (ds *DataSet) Clone() timeseries.Timeseries {
 	ds.UpdateLock.Lock()
 	defer ds.UpdateLock.Unlock()
 	clone := &DataSet{
@@ -71,7 +73,7 @@ func (ds *DataSet) Clone() Timeseries {
 		SizeCropper:  ds.SizeCropper,
 		RangeCropper: ds.RangeCropper,
 		OutputFormat: ds.OutputFormat,
-		ExtentList:   make(ExtentList, len(ds.ExtentList)),
+		ExtentList:   make(timeseries.ExtentList, len(ds.ExtentList)),
 		Results:      make([]Result, len(ds.Results)),
 	}
 	if ds.TimeRangeQuery != nil {
@@ -87,7 +89,7 @@ func (ds *DataSet) Clone() Timeseries {
 // Merge merges the provided Timeseries list into the base DataSet
 // (in the order provided) and optionally sorts the merged DataSet
 // This implementation ignores any Timeseries that are not of type *DataSet
-func (ds *DataSet) Merge(sortSeries bool, collection ...Timeseries) {
+func (ds *DataSet) Merge(sortSeries bool, collection ...timeseries.Timeseries) {
 	if ds.Merger != nil {
 		ds.Merger(sortSeries, collection...)
 		return
@@ -96,7 +98,7 @@ func (ds *DataSet) Merge(sortSeries bool, collection ...Timeseries) {
 }
 
 // DefaultMerger is the default Merger function
-func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
+func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...timeseries.Timeseries) {
 	mtx := sync.Mutex{}
 	wg := sync.WaitGroup{}
 
@@ -186,7 +188,7 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 // CropToSize reduces the number of elements in the Timeseries to the provided count, by evicting elements
 // using a least-recently-used methodology. The time parameter limits the upper extent to the provided time,
 // in order to support backfill tolerance
-func (ds *DataSet) CropToSize(sz int, t time.Time, lur Extent) {
+func (ds *DataSet) CropToSize(sz int, t time.Time, lur timeseries.Extent) {
 	if ds.SizeCropper != nil {
 		ds.SizeCropper(sz, t, lur)
 		return
@@ -195,13 +197,13 @@ func (ds *DataSet) CropToSize(sz int, t time.Time, lur Extent) {
 }
 
 // DefaultSizeCropper is the default SizeCropper Function
-func (ds *DataSet) DefaultSizeCropper(sz int, t time.Time, lur Extent) {
+func (ds *DataSet) DefaultSizeCropper(sz int, t time.Time, lur timeseries.Extent) {
 	// TODO: Complete this method
 }
 
 // CropToRange reduces the DataSet down to timestamps contained within the provided Extents (inclusive).
 // CropToRange assumes the base DataSet is already sorted, and will corrupt an unsorted DataSet
-func (ds *DataSet) CropToRange(e Extent) {
+func (ds *DataSet) CropToRange(e timeseries.Extent) {
 	if ds.RangeCropper != nil {
 		ds.RangeCropper(e)
 		return
@@ -210,14 +212,14 @@ func (ds *DataSet) CropToRange(e Extent) {
 }
 
 // DefaultRangeCropper is the default RangeCropper Function
-func (ds *DataSet) DefaultRangeCropper(e Extent) {
+func (ds *DataSet) DefaultRangeCropper(e timeseries.Extent) {
 	x := len(ds.ExtentList)
 	// The DataSet has no extents, so no need to do anything
 	if x == 0 {
 		for i := range ds.Results {
 			ds.Results[i].SeriesList = make([]*Series, 0)
 		}
-		ds.ExtentList = ExtentList{}
+		ds.ExtentList = timeseries.ExtentList{}
 		return
 	}
 	// if the extent of the series is entirely outside the extent of the crop
@@ -226,7 +228,7 @@ func (ds *DataSet) DefaultRangeCropper(e Extent) {
 		for i := range ds.Results {
 			ds.Results[i].SeriesList = make([]*Series, 0)
 		}
-		ds.ExtentList = ExtentList{}
+		ds.ExtentList = timeseries.ExtentList{}
 		return
 	}
 	// if the series extent is entirely inside the extent of the crop range,
@@ -355,7 +357,7 @@ func (ds *DataSet) Size() int64 {
 }
 
 // SetTimeRangeQuery sets the TimeRangeQuery for the DataSet
-func (ds *DataSet) SetTimeRangeQuery(trq *TimeRangeQuery) {
+func (ds *DataSet) SetTimeRangeQuery(trq *timeseries.TimeRangeQuery) {
 	ds.TimeRangeQuery = trq
 }
 
@@ -373,13 +375,13 @@ func (ds *DataSet) TimestampCount() int64 {
 }
 
 // Extents returns the DataSet's ExentList
-func (ds *DataSet) Extents() ExtentList {
+func (ds *DataSet) Extents() timeseries.ExtentList {
 	return ds.ExtentList
 }
 
 // SetExtents overwrites a DataSet's known extents with the provided extent list
-func (ds *DataSet) SetExtents(el ExtentList) {
-	l := make(ExtentList, len(el))
+func (ds *DataSet) SetExtents(el timeseries.ExtentList) {
+	l := make(timeseries.ExtentList, len(el))
 	copy(l, el)
 	ds.ExtentList = l
 }
@@ -395,7 +397,7 @@ func (ds *DataSet) Sort() {
 }
 
 // UnmarshalDataSet unmarshals the dataset from a msgpack-formatted byte slice
-func UnmarshalDataSet(b []byte) (Timeseries, error) {
+func UnmarshalDataSet(b []byte) (timeseries.Timeseries, error) {
 	ds := &DataSet{}
 	_, err := ds.UnmarshalMsg(b)
 	if err == nil && ds.TimeRangeQuery != nil {
@@ -406,10 +408,10 @@ func UnmarshalDataSet(b []byte) (Timeseries, error) {
 }
 
 // MarshalDataSet marshals the dataset into a msgpack-formatted byte slice
-func MarshalDataSet(ts Timeseries) ([]byte, error) {
+func MarshalDataSet(ts timeseries.Timeseries) ([]byte, error) {
 	ds, ok := ts.(*DataSet)
 	if !ok {
-		return nil, ErrUnknownFormat
+		return nil, timeseries.ErrUnknownFormat
 	}
 	if ds.TimeRangeQuery != nil {
 		ds.TimeRangeQuery.StepNS = ds.TimeRangeQuery.Step.Nanoseconds()

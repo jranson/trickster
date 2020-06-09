@@ -16,7 +16,7 @@
 
 //go:generate msgp
 
-package timeseries
+package dataset
 
 import (
 	"encoding/binary"

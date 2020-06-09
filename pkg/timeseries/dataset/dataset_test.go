@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-package timeseries
+package dataset
 
 import (
 	"testing"
 	"time"
+
+	"github.com/tricksterproxy/trickster/pkg/timeseries"
 )
 
 func testDataSet() *DataSet {
 	ds := &DataSet{
 		Results:        []Result{testResult()},
-		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(10, 0)}},
-		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
+		ExtentList:     timeseries.ExtentList{timeseries.Extent{Start: time.Unix(5, 0), End: time.Unix(10, 0)}},
+		TimeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5 * timeseries.Second)},
 	}
 	ds.Merger = ds.DefaultMerger
 	ds.SizeCropper = ds.DefaultSizeCropper
@@ -55,32 +57,32 @@ func testDataSet2() *DataSet {
 	newPoints := func() Points {
 		return Points{
 			Point{
-				Epoch:  Epoch(5 * Second),
+				Epoch:  Epoch(5 * timeseries.Second),
 				Size:   16,
 				Values: []interface{}{1},
 			},
 			Point{
-				Epoch:  Epoch(10 * Second),
+				Epoch:  Epoch(10 * timeseries.Second),
 				Size:   16,
 				Values: []interface{}{1},
 			},
 			Point{
-				Epoch:  Epoch(15 * Second),
+				Epoch:  Epoch(15 * timeseries.Second),
 				Size:   16,
 				Values: []interface{}{1},
 			},
 			Point{
-				Epoch:  Epoch(20 * Second),
+				Epoch:  Epoch(20 * timeseries.Second),
 				Size:   16,
 				Values: []interface{}{1},
 			},
 			Point{
-				Epoch:  Epoch(25 * Second),
+				Epoch:  Epoch(25 * timeseries.Second),
 				Size:   16,
 				Values: []interface{}{1},
 			},
 			Point{
-				Epoch:  Epoch(30 * Second),
+				Epoch:  Epoch(30 * timeseries.Second),
 				Size:   16,
 				Values: []interface{}{1},
 			},
@@ -107,9 +109,9 @@ func testDataSet2() *DataSet {
 	}
 
 	ds := &DataSet{
-		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
+		TimeRangeQuery: &timeseries.TimeRangeQuery{Step: time.Duration(5 * timeseries.Second)},
 		Results:        []Result{r1, r2},
-		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(30, 0)}},
+		ExtentList:     timeseries.ExtentList{timeseries.Extent{Start: time.Unix(5, 0), End: time.Unix(30, 0)}},
 	}
 
 	ds.Merger = ds.DefaultMerger
@@ -142,7 +144,7 @@ func TestSort(t *testing.T) {
 
 func TestSetExtents(t *testing.T) {
 	ds := &DataSet{}
-	ex := ExtentList{Extent{Start: time.Time{}, End: time.Time{}}}
+	ex := timeseries.ExtentList{timeseries.Extent{Start: time.Time{}, End: time.Time{}}}
 	ds.SetExtents(ex)
 	if len(ds.Extents()) != 1 {
 		t.Errorf(`expected 1. got %d`, len(ds.ExtentList))
@@ -165,7 +167,7 @@ func TestStepDuration(t *testing.T) {
 
 func TestSetTimeRangeQuery(t *testing.T) {
 	ds := testDataSet()
-	trq := &TimeRangeQuery{Step: time.Duration(1 * Second)}
+	trq := &timeseries.TimeRangeQuery{Step: time.Duration(1 * timeseries.Second)}
 
 	ds.SetTimeRangeQuery(trq)
 	if int(ds.Step().Seconds()) != 1 {

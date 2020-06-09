@@ -36,6 +36,7 @@ import (
 	po "github.com/tricksterproxy/trickster/pkg/proxy/paths/options"
 	tt "github.com/tricksterproxy/trickster/pkg/proxy/timeconv"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 	tst "github.com/tricksterproxy/trickster/pkg/util/testing/timeseries/model"
 )
 
@@ -432,7 +433,7 @@ func (c *TestClient) marshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writ
 		return fmt.Errorf("generic failure for testing purposes (key: %s)", c.RangeCacheKey)
 	}
 
-	ds, ok := ts.(*timeseries.DataSet)
+	ds, ok := ts.(*dataset.DataSet)
 	if !ok {
 		return timeseries.ErrUnknownFormat
 	}

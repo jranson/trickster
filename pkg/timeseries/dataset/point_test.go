@@ -14,23 +14,25 @@
  * limitations under the License.
  */
 
-package timeseries
+package dataset
 
 import (
 	"sort"
 	"testing"
+
+	"github.com/tricksterproxy/trickster/pkg/timeseries"
 )
 
 func testPoints() Points {
 
 	return Points{
 		Point{
-			Epoch:  Epoch(5 * Second),
+			Epoch:  Epoch(5 * timeseries.Second),
 			Size:   27,
 			Values: []interface{}{1},
 		},
 		Point{
-			Epoch:  Epoch(10 * Second),
+			Epoch:  Epoch(10 * timeseries.Second),
 			Size:   27,
 			Values: []interface{}{1},
 		},
@@ -77,10 +79,10 @@ func TestPointsClone(t *testing.T) {
 
 func TestPointsSort(t *testing.T) {
 	pts := testPoints()
-	pts[0].Epoch = 100 * Second
+	pts[0].Epoch = 100 * timeseries.Second
 	sort.Sort(pts)
 	p := pts[0]
-	if p.Epoch != 10*Second {
+	if p.Epoch != 10*timeseries.Second {
 		t.Error("sort mismatch")
 	}
 }
