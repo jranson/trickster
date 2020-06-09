@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 import (
@@ -33,7 +35,7 @@ type TimeRangeQuery struct {
 	// Extent provides the start and end times for the request from a timeseries database
 	Extent Extent `msg:"exent"`
 	// Step indicates the amount of time in seconds between each datapoint in a TimeRangeQuery's resulting timeseries
-	Step time.Duration `msg:"step"`
+	Step time.Duration `msg:"-"`
 	// TimestampFieldName indicates the database field name for the timestamp field
 	TimestampFieldName string `msg:"-"`
 	// TemplateURL is used by some Origin Types for templatization of url parameters containing timestamps
@@ -42,6 +44,8 @@ type TimeRangeQuery struct {
 	FastForwardDisable bool `msg:"-"`
 	// IsOffset is true if the query uses a relative offset modifier
 	IsOffset bool `msg:"-"`
+	// StepNS is the nanosecond representation for Step
+	StepNS int64 `mst:"step"`
 }
 
 // Clone returns an exact copy of a TimeRangeQuery

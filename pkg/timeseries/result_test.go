@@ -18,18 +18,17 @@ package timeseries
 
 import "testing"
 
-func testResult() *Result {
+func testResult() Result {
 	s := testSeries()
-	r := &Result{
-		StatementID:  42,
-		SeriesList:   []*Series{s},
-		SeriesLookup: map[Hash]*Series{s.Header.Hash: s},
+	r := Result{
+		StatementID: 42,
+		SeriesList:  []*Series{s},
 	}
 	return r
 }
 
 func TestResultHashes(t *testing.T) {
-	r := &Result{}
+	r := Result{}
 	if r.Hashes() != nil {
 		t.Error("expected nil hashes list")
 	}

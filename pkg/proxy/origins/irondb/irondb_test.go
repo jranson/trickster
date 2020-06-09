@@ -22,6 +22,7 @@ import (
 	cr "github.com/tricksterproxy/trickster/pkg/cache/registration"
 	"github.com/tricksterproxy/trickster/pkg/config"
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins"
+	"github.com/tricksterproxy/trickster/pkg/proxy/origins/irondb/model"
 	modeliron "github.com/tricksterproxy/trickster/pkg/proxy/origins/irondb/model"
 	oo "github.com/tricksterproxy/trickster/pkg/proxy/origins/options"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
@@ -47,7 +48,8 @@ func TestIRONdbClientInterfacing(t *testing.T) {
 }
 
 var testModeler = timeseries.NewModeler(modeliron.UnmarshalTimeseries,
-	modeliron.MarshalTimeseries, modeliron.MarshalTimeseriesWriter)
+	modeliron.MarshalTimeseries, modeliron.MarshalTimeseriesWriter,
+	model.UnmarshalTimeseries, model.MarshalTimeseries)
 
 func TestNewClient(t *testing.T) {
 	conf, _, err := config.Load("trickster", "test",

@@ -21,20 +21,18 @@ import (
 	"testing"
 )
 
-func testPoints(sh *SeriesHeader) Points {
+func testPoints() Points {
 
 	return Points{
-		&Point{
+		Point{
 			Epoch:  Epoch(5 * Second),
 			Size:   27,
 			Values: []interface{}{1},
-			Header: sh,
 		},
-		&Point{
+		Point{
 			Epoch:  Epoch(10 * Second),
 			Size:   27,
 			Values: []interface{}{1},
-			Header: sh,
 		},
 	}
 }
@@ -52,8 +50,8 @@ func TestPointClone(t *testing.T) {
 }
 
 func TestPointsClone(t *testing.T) {
-	pts := testPoints(nil)
-	pts2 := pts.Clone(nil)
+	pts := testPoints()
+	pts2 := pts.Clone()
 
 	if len(pts) != len(pts2) {
 		t.Error("clone mismatch")
@@ -78,7 +76,7 @@ func TestPointsClone(t *testing.T) {
 }
 
 func TestPointsSort(t *testing.T) {
-	pts := testPoints(nil)
+	pts := testPoints()
 	pts[0].Epoch = 100 * Second
 	sort.Sort(pts)
 	p := pts[0]

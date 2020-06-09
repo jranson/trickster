@@ -138,7 +138,7 @@ func TestMarshalTimeseriesRaw(t *testing.T) {
 		t.Errorf("expected [%s] got [%s]", testResult1, s)
 	}
 
-	cf.Results = append(cf.Results, &timeseries.Result{})
+	cf.Results = append(cf.Results, timeseries.Result{})
 	b = bytes.NewBuffer(nil)
 	err = marshalTimeseriesRaw(cf, b)
 	if len(b.Bytes()) != 0 {

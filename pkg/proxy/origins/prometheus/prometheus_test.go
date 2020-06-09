@@ -36,7 +36,8 @@ import (
 )
 
 var testModeler = timeseries.NewModeler(model.UnmarshalTimeseries,
-	model.MarshalTimeseries, model.MarshalTimeseriesWriter)
+	model.MarshalTimeseries, model.MarshalTimeseriesWriter,
+	timeseries.UnmarshalDataSet, timeseries.MarshalDataSet)
 
 func TestPrometheusClientInterfacing(t *testing.T) {
 

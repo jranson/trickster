@@ -115,14 +115,12 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	}
 	var start, end, step int64
 	var err error
-	r := &timeseries.Result{}
 	ds := &timeseries.DataSet{
-		Timestamps: make(timeseries.EpochLookup),
-		Results:    []*timeseries.Result{r},
+		Results: []timeseries.Result{{}},
 	}
 	lines := strings.Split(string(data), "\n")
 	sl := make([]*timeseries.Series, len(lines))
-	r.SeriesLookup = make(map[timeseries.Hash]*timeseries.Series)
+	//r.SeriesLookup = make(map[timeseries.Hash]*timeseries.Series)
 	wg := sync.WaitGroup{}
 	for i, line := range lines {
 		if line == "" {
@@ -172,17 +170,14 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 				}
 				ds.UpdateLock.Unlock()
 			}
-			fd := &timeseries.FieldDefinition{
+			fd := timeseries.FieldDefinition{
 				Name:     "value",
 				DataType: timeseries.Float64,
 			}
-			sh := &timeseries.SeriesHeader{
-				Name: headerParts[0],
-				//FieldsLookup: map[string]*timeseries.FieldDefinition{"value": fd},
-				FieldsList: []*timeseries.FieldDefinition{fd},
-				Size:       len(headerParts[0]) + 35,
+			sh := timeseries.SeriesHeader{
+				Name:       headerParts[0],
+				FieldsList: []timeseries.FieldDefinition{fd},
 			}
-			sh.CalculateHash()
 			width := end - start
 			if width < 0 {
 				err = timeseries.ErrInvalidExtent
@@ -203,50 +198,30 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 					return
 				}
 				epoch := timeseries.Epoch(x * timeseries.Second)
-				point := &timeseries.Point{
+				point := timeseries.Point{
 					Epoch:  epoch,
-					Header: sh,
 					Values: []interface{}{v},
-				}
-				ds.UpdateLock.Lock()
-				var ok bool
-				if _, ok = ds.Timestamps[epoch]; !ok {
-					ds.Timestamps[epoch] = true
+					Size:   20,
 				}
 				points[j] = point
-				ds.UpdateLock.Unlock()
 				j++
 			}
+			sh.CalculateSize()
 			series := &timeseries.Series{
-				Header: sh,
-				Points: points,
+				Header:    sh,
+				Points:    points,
+				PointSize: int64(len(points)) * 20,
 			}
 			sl[k] = series
-			// TODO: Properly populate serieslookup
-			if r.SeriesLookup == nil {
-				r.SeriesLookup = make(timeseries.SeriesLookup)
-			}
-			r.SeriesLookup[sh.Hash] = series
 		}(line, i)
 	}
 	wg.Wait()
 	if err != nil {
 		return nil, err
 	}
-	r.SeriesList = make([]*timeseries.Series, 0, len(sl))
-	for _, s := range sl {
-		if s != nil && s.Header != nil && s.Points != nil {
-			r.SeriesList = append(r.SeriesList, s)
-		}
-	}
-	// ds.Epochs = make(timeseries.Epochs, len(ds.PointsLookup))
-	// var i int
-	// for k := range ds.PointsLookup {
-	// 	ds.Epochs[i] = k
-	// 	i++
-	// }
-	// sort.Slice(ds.Epochs, func(i, j int) bool {
-	// 	return ds.Epochs[i] < ds.Epochs[j]
-	// })
+	ds.Results[0].SeriesList = sl
+
+	// TODO: Populate more Result data and Series data, e.g., ExtentList
+
 	return ds, nil
 }

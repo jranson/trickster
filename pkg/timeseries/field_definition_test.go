@@ -20,14 +20,14 @@ import "testing"
 
 func TestFieldDefinitionClone(t *testing.T) {
 
-	fd := &FieldDefinition{
+	fd := FieldDefinition{
 		Name:     "test",
 		DataType: FieldDataType(1),
 	}
 
 	fd2 := fd.Clone()
 
-	if *fd2 != *fd {
+	if fd2 != fd {
 		t.Error("clone mismatch")
 	}
 

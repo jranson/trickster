@@ -22,16 +22,16 @@ func testSeries() *Series {
 	sh := testSeriesHeader()
 	return &Series{
 		Header: sh,
-		Points: testPoints(sh),
+		Points: testPoints(),
 	}
 }
 
-func testSeriesHeader() *SeriesHeader {
-	sh := &SeriesHeader{
+func testSeriesHeader() SeriesHeader {
+	sh := SeriesHeader{
 		Name:           "test",
 		QueryStatement: "SELECT TRICKSTER!",
 		Tags:           Tags{"test1": "value1"},
-		FieldsList: []*FieldDefinition{
+		FieldsList: []FieldDefinition{
 			{
 				Name:     "Field1",
 				DataType: FieldDataType(1),
@@ -40,16 +40,12 @@ func testSeriesHeader() *SeriesHeader {
 		TimestampIndex: 37,
 		Size:           56,
 	}
-	//sh.FieldsLookup = map[string]*FieldDefinition{"Field1": sh.FieldsList[0]}
-	sh.CalculateHash()
 	return sh
 }
 
 func TestSeriesHeaderCalculateHash(t *testing.T) {
 	sh := testSeriesHeader()
-	sh.Hash = 0
-	sh.CalculateHash()
-	if sh.Hash == 0 {
+	if sh.CalculateHash() == 0 {
 		t.Error("invalid hash value")
 	}
 }
@@ -70,11 +66,7 @@ func TestSeriesClone(t *testing.T) {
 	s := testSeries()
 	s2 := s.Clone()
 
-	if s2.Header.Hash != s.Header.Hash {
-		t.Error("series clone mismatch")
-	}
-
-	if s2.Header == s.Header {
+	if s2.Header.CalculateHash() != s.Header.CalculateHash() {
 		t.Error("series clone mismatch")
 	}
 

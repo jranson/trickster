@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 import (
@@ -25,9 +27,11 @@ import (
 // Series represents a single timeseries in a Result
 type Series struct {
 	// Header is the Series Header describing the Series
-	Header *SeriesHeader
+	Header SeriesHeader `msg:"header"`
 	// Points is the list of Points in the Series
-	Points Points
+	Points Points `msg:"points"`
+	// PointSize is the memory utilization of the Points in bytes
+	PointSize int64 `msg:"ps"`
 }
 
 // SeriesHeader is the header section of a series, and describes its
@@ -38,14 +42,12 @@ type SeriesHeader struct {
 	// Tags is the map of tags associated with the Series
 	Tags Tags `msg:"tags"`
 	// FieldsList is the ordered list of fields in the Series
-	FieldsList []*FieldDefinition `msg:"fields"`
+	FieldsList []FieldDefinition `msg:"fields"`
 	// TimestampIndex is the index of the TimeStamp field in the output when
 	// it's time to serialize the DataSet for the wire
 	TimestampIndex int `msg:"ti"`
 	// QueryStatement is the original query to which this DataSet is associated
 	QueryStatement string `msg:"query"`
-	// Hash is the FNV64a Hash for the SeriesHeader
-	Hash Hash `msg:"hash"`
 	// Size is the memory utilization of the Header in bytes
 	Size int `msg:"size"`
 }
@@ -60,7 +62,7 @@ type Hashes []Hash
 type SeriesLookup map[Hash]*Series
 
 // CalculateHash sums the FNV64a hash for the Header and stores it to the Hash member
-func (sh *SeriesHeader) CalculateHash() {
+func (sh SeriesHeader) CalculateHash() Hash {
 	hash := fnv.NewInlineFNV64a()
 	hash.Write([]byte(sh.Name))
 	hash.Write([]byte(sh.QueryStatement))
@@ -75,19 +77,18 @@ func (sh *SeriesHeader) CalculateHash() {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, uint32(sh.TimestampIndex))
 	hash.Write(b)
-	sh.Hash = Hash(hash.Sum64())
+	return Hash(hash.Sum64())
 }
 
 // Clone returns a perfect, new copy of the SeriesHeader
-func (sh *SeriesHeader) Clone() *SeriesHeader {
-	clone := &SeriesHeader{
+func (sh SeriesHeader) Clone() SeriesHeader {
+	clone := SeriesHeader{
 		Name:       sh.Name,
 		Tags:       sh.Tags.Clone(),
-		FieldsList: make([]*FieldDefinition, len(sh.FieldsList)),
+		FieldsList: make([]FieldDefinition, len(sh.FieldsList)),
 		//FieldsLookup:   make(map[string]*FieldDefinition),
 		TimestampIndex: sh.TimestampIndex,
 		QueryStatement: sh.QueryStatement,
-		Hash:           sh.Hash,
 		Size:           sh.Size,
 	}
 	for i, fd := range sh.FieldsList {
@@ -97,26 +98,26 @@ func (sh *SeriesHeader) Clone() *SeriesHeader {
 	return clone
 }
 
-// Size returns the memory utilization of the Series in bytes
-func (s *Series) Size() int {
-	c := 8
-	if s.Header != nil {
-		c += s.Header.Size
+// CalculateSize sets and returns the header size
+func (sh SeriesHeader) CalculateSize() int {
+	c := len(sh.Name) + sh.Tags.Size() + 8 + len(sh.QueryStatement)
+	for i := range sh.FieldsList {
+		c += len(sh.FieldsList[i].Name) + 1
 	}
-	if s.Points != nil {
-		c += s.Points.Size()
-	}
+	sh.Size = c
 	return c
+}
+
+// Size returns the memory utilization of the Series in bytes
+func (s Series) Size() int64 {
+	return int64(16 + s.PointSize + int64(s.Header.Size))
 }
 
 // Clone returns a perfect, new copy of the Series
 func (s *Series) Clone() *Series {
-	clone := &Series{}
-	if s.Header != nil {
-		clone.Header = s.Header.Clone()
-	}
+	clone := &Series{Header: s.Header.Clone()}
 	if s.Points != nil {
-		clone.Points = s.Points.Clone(clone.Header)
+		clone.Points = s.Points.Clone()
 	}
 	return clone
 }

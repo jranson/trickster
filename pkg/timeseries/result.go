@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 // Result represents the results of a single query statement in the DataSet
@@ -26,12 +28,12 @@ type Result struct {
 	// SeriesList is an ordered list of the Series in this result
 	SeriesList []*Series `msg:"series"`
 	// SeriesLookup is map of Series in the result, searchable by SeriesHeader Hash
-	SeriesLookup SeriesLookup `msg:"-"`
+	//SeriesLookup SeriesLookup `msg:"-"`
 }
 
 // Size returns the size of the Result in bytes
-func (r *Result) Size() int {
-	c := 4 + (16 * len(r.SeriesLookup)) + (8 * len(r.SeriesList))
+func (r Result) Size() int64 {
+	c := int64(4 + (8 * len(r.SeriesList)) + len(r.Error)) // + (16 * len(r.SeriesLookup))
 	for _, s := range r.SeriesList {
 		c += s.Size()
 	}
@@ -39,28 +41,28 @@ func (r *Result) Size() int {
 }
 
 // Hashes returns the ordered list of Hashes for the SeriesList in the Result
-func (r *Result) Hashes() Hashes {
+func (r Result) Hashes() Hashes {
 	if len(r.SeriesList) == 0 {
 		return nil
 	}
 	h := make(Hashes, len(r.SeriesList))
 	for i := range r.SeriesList {
-		h[i] = r.SeriesList[i].Header.Hash
+		h[i] = r.SeriesList[i].Header.CalculateHash()
 	}
 	return h
 }
 
 // Clone returns an exact copy of the Result
-func (r *Result) Clone() *Result {
-	clone := &Result{
-		StatementID:  r.StatementID,
-		Error:        r.Error,
-		SeriesList:   make([]*Series, len(r.SeriesList)),
-		SeriesLookup: make(SeriesLookup),
+func (r Result) Clone() Result {
+	clone := Result{
+		StatementID: r.StatementID,
+		Error:       r.Error,
+		SeriesList:  make([]*Series, len(r.SeriesList)),
+		//SeriesLookup: make(SeriesLookup),
 	}
 	for i, s := range r.SeriesList {
 		clone.SeriesList[i] = s.Clone()
-		clone.SeriesLookup[s.Header.Hash] = clone.SeriesList[i]
+		//clone.SeriesLookup[s.Header.Hash] = clone.SeriesList[i]
 	}
 	return clone
 }

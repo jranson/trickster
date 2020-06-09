@@ -79,12 +79,12 @@ func (se *SeriesEnvelope) ValueCount() int64 {
 }
 
 // TimestampCount returns the count unique timestampes in across all series in the Timeseries
-func (se *SeriesEnvelope) TimestampCount() int {
+func (se *SeriesEnvelope) TimestampCount() int64 {
 	if se.timestamps == nil {
 		se.timestamps = make(map[time.Time]bool)
 	}
 	se.updateTimestamps()
-	return len(se.timestamps)
+	return int64(len(se.timestamps))
 }
 
 func (se *SeriesEnvelope) updateTimestamps() {
@@ -296,14 +296,14 @@ func (se *SeriesEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent)
 	}
 
 	tc := se.TimestampCount()
-	if len(se.Results) == 0 || tc <= sz {
+	if len(se.Results) == 0 || tc <= int64(sz) {
 		return
 	}
 
 	el := timeseries.ExtentListLRU(se.ExtentList).UpdateLastUsed(lur, se.StepDuration)
 	sort.Sort(el)
 
-	rc := tc - sz // # of required timestamps we must delete to meet the rentention policy
+	rc := tc - int64(sz) // # of required timestamps we must delete to meet the rentention policy
 	removals := make(map[time.Time]bool)
 	done := false
 	var ok bool
@@ -312,7 +312,7 @@ func (se *SeriesEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent)
 		for ts := x.Start; !x.End.Before(ts) && !done; ts = ts.Add(se.StepDuration) {
 			if _, ok = se.timestamps[ts]; ok {
 				removals[ts] = true
-				done = len(removals) >= rc
+				done = int64(len(removals)) >= rc
 			}
 		}
 		if done {

@@ -1382,7 +1382,7 @@ func TestTimestampCount(t *testing.T) {
 
 	tests := []struct {
 		ts       *ResultsEnvelope
-		expected int
+		expected int64
 	}{
 		{
 			ts: &ResultsEnvelope{

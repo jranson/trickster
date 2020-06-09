@@ -186,19 +186,23 @@ func registerOriginRoutes(router *mux.Router, conf *config.Config, k string,
 	case "prometheus", "":
 		client, err = prometheus.NewClient(k, o, mux.NewRouter(), c,
 			timeseries.NewModeler(modelprom.UnmarshalTimeseries,
-				modelprom.MarshalTimeseries, modelprom.MarshalTimeseriesWriter))
+				modelprom.MarshalTimeseries, modelprom.MarshalTimeseriesWriter,
+				timeseries.UnmarshalDataSet, timeseries.MarshalDataSet))
 	case "influxdb":
 		client, err = influxdb.NewClient(k, o, mux.NewRouter(), c,
 			timeseries.NewModeler(modelflux.UnmarshalTimeseries,
-				modelflux.MarshalTimeseries, modelflux.MarshalTimeseriesWriter))
+				modelflux.MarshalTimeseries, modelflux.MarshalTimeseriesWriter,
+				modelflux.UnmarshalTimeseries, modelflux.MarshalTimeseries))
 	case "irondb":
 		client, err = irondb.NewClient(k, o, mux.NewRouter(), c,
 			timeseries.NewModeler(modeliron.UnmarshalTimeseries,
-				modeliron.MarshalTimeseries, modeliron.MarshalTimeseriesWriter))
+				modeliron.MarshalTimeseries, modeliron.MarshalTimeseriesWriter,
+				modeliron.UnmarshalTimeseries, modeliron.MarshalTimeseries))
 	case "clickhouse":
 		client, err = clickhouse.NewClient(k, o, mux.NewRouter(), c,
 			timeseries.NewModeler(modelch.UnmarshalTimeseries,
-				modelch.MarshalTimeseries, modelch.MarshalTimeseriesWriter))
+				modelch.MarshalTimeseries, modelch.MarshalTimeseriesWriter,
+				modelch.UnmarshalTimeseries, modelch.MarshalTimeseries))
 	case "rpc", "reverseproxycache":
 		client, err = reverseproxycache.NewClient(k, o, mux.NewRouter(), c)
 	case "rule":

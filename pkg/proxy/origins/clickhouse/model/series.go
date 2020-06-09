@@ -280,11 +280,11 @@ func (re *ResultsEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent
 	tc := re.TimestampCount()
 	el := timeseries.ExtentListLRU(re.ExtentList).UpdateLastUsed(lur, re.Step())
 	sort.Sort(el)
-	if len(re.Data) == 0 || tc <= sz {
+	if len(re.Data) == 0 || tc <= int64(sz) {
 		return
 	}
 
-	rc := tc - sz // # of required timestamps we must delete to meet the rentention policy
+	rc := tc - int64(sz) // # of required timestamps we must delete to meet the rentention policy
 	removals := make(map[time.Time]bool)
 	done := false
 	var ok bool
@@ -293,7 +293,7 @@ func (re *ResultsEnvelope) CropToSize(sz int, t time.Time, lur timeseries.Extent
 		for ts := x.Start; !x.End.Before(ts) && !done; ts = ts.Add(re.Step()) {
 			if _, ok = re.timestamps[ts]; ok {
 				removals[ts] = true
-				done = len(removals) >= rc
+				done = int64(len(removals)) >= rc
 			}
 		}
 		if done {
@@ -496,9 +496,9 @@ func (re *ResultsEnvelope) Extents() timeseries.ExtentList {
 }
 
 // TimestampCount returns the number of unique timestamps across the timeseries
-func (re *ResultsEnvelope) TimestampCount() int {
+func (re *ResultsEnvelope) TimestampCount() int64 {
 	re.updateTimestamps()
-	return len(re.timestamps)
+	return int64(len(re.timestamps))
 }
 
 // SeriesCount returns the number of individual Series in the Timeseries object

@@ -31,7 +31,8 @@ import (
 )
 
 var testModeler = timeseries.NewModeler(model.UnmarshalTimeseries,
-	model.MarshalTimeseries, model.MarshalTimeseriesWriter)
+	model.MarshalTimeseries, model.MarshalTimeseriesWriter,
+	model.UnmarshalTimeseries, model.MarshalTimeseries)
 
 func TestClickhouseClientInterfacing(t *testing.T) {
 

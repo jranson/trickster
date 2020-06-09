@@ -34,7 +34,7 @@ type Timeseries interface {
 	// Extents should return the list of time Extents having data present in the Timeseries
 	Extents() ExtentList
 	// TimeStampCount should return the number of unique timestamps across the timeseries
-	TimestampCount() int
+	TimestampCount() int64
 	// Step should return the Step Interval of the Timeseries
 	Step() time.Duration
 	// Merge should merge the Timeseries collection into the source Timeseries

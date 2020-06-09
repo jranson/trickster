@@ -29,7 +29,8 @@ import (
 )
 
 var testModeler = timeseries.NewModeler(model.UnmarshalTimeseries,
-	model.MarshalTimeseries, model.MarshalTimeseriesWriter)
+	model.MarshalTimeseries, model.MarshalTimeseriesWriter,
+	model.UnmarshalTimeseries, model.MarshalTimeseries)
 
 func TestInfluxDBClientInterfacing(t *testing.T) {
 

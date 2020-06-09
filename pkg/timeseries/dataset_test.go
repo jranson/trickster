@@ -23,13 +23,9 @@ import (
 
 func testDataSet() *DataSet {
 	ds := &DataSet{
-		Results:        []*Result{testResult()},
+		Results:        []Result{testResult()},
 		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(10, 0)}},
 		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
-	}
-	ds.Timestamps = EpochLookup{
-		ds.Results[0].SeriesList[0].Points[0].Epoch: true,
-		ds.Results[0].SeriesList[0].Points[1].Epoch: true,
 	}
 	ds.Merger = ds.DefaultMerger
 	ds.SizeCropper = ds.DefaultSizeCropper
@@ -56,93 +52,66 @@ func testDataSet2() *DataSet {
 	sh4.Name = "test4"
 	sh4.CalculateHash()
 
-	newPoints := func(sh *SeriesHeader) Points {
+	newPoints := func() Points {
 		return Points{
-			&Point{
+			Point{
 				Epoch:  Epoch(5 * Second),
-				Size:   27,
+				Size:   16,
 				Values: []interface{}{1},
-				Header: sh,
 			},
-			&Point{
+			Point{
 				Epoch:  Epoch(10 * Second),
-				Size:   27,
+				Size:   16,
 				Values: []interface{}{1},
-				Header: sh,
 			},
-			&Point{
+			Point{
 				Epoch:  Epoch(15 * Second),
-				Size:   27,
+				Size:   16,
 				Values: []interface{}{1},
-				Header: sh,
 			},
-			&Point{
+			Point{
 				Epoch:  Epoch(20 * Second),
-				Size:   27,
+				Size:   16,
 				Values: []interface{}{1},
-				Header: sh,
 			},
-			&Point{
+			Point{
 				Epoch:  Epoch(25 * Second),
-				Size:   27,
+				Size:   16,
 				Values: []interface{}{1},
-				Header: sh,
 			},
-			&Point{
+			Point{
 				Epoch:  Epoch(30 * Second),
-				Size:   27,
+				Size:   16,
 				Values: []interface{}{1},
-				Header: sh,
 			},
 		}
 	}
 
+	s := newPoints().Size()
+
 	// r1 s1
-	r1 := &Result{
+	r1 := Result{
 		StatementID: 0,
 		SeriesList: []*Series{
-			{sh1, newPoints(sh1)},
+			{sh1, newPoints(), s},
 		},
 	}
-	r1.SeriesLookup = map[Hash]*Series{
-		sh1.Hash: r1.SeriesList[0],
-	}
-	r2 := &Result{
+
+	r2 := Result{
 		StatementID: 1,
 		SeriesList: []*Series{
-			{sh2, newPoints(sh2)},
-			{sh3, newPoints(sh3)},
-			{sh4, newPoints(sh4)},
+			{sh2, newPoints(), s},
+			{sh3, newPoints(), s},
+			{sh4, newPoints(), s},
 		},
-	}
-	r2.SeriesLookup = map[Hash]*Series{
-		sh2.Hash: r2.SeriesList[0],
-		sh3.Hash: r2.SeriesList[1],
-		sh4.Hash: r2.SeriesList[2],
 	}
 
 	ds := &DataSet{
 		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
-		Results:        []*Result{r1, r2},
+		Results:        []Result{r1, r2},
 		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(30, 0)}},
 	}
 
-	buildTimestamps := func(ds *DataSet) EpochLookup {
-		pl := make(EpochLookup)
-		for _, r := range ds.Results {
-			for _, s := range r.SeriesList {
-				for _, p := range s.Points {
-					var ok bool
-					if _, ok = pl[p.Epoch]; !ok {
-						pl[p.Epoch] = true
-					}
-				}
-			}
-		}
-		return pl
-	}
-
-	ds.Timestamps = buildTimestamps(ds)
 	ds.Merger = ds.DefaultMerger
 	ds.SizeCropper = ds.DefaultSizeCropper
 	ds.RangeCropper = ds.DefaultRangeCropper
@@ -209,7 +178,7 @@ func TestValueCount(t *testing.T) {
 	if ds.ValueCount() != 2 {
 		t.Errorf("expected 2 got %d", ds.ValueCount())
 	}
-	ds.Results[0] = nil
+	ds.Results[0] = Result{}
 	if ds.ValueCount() != 0 {
 		t.Errorf("expected 0 got %d", ds.ValueCount())
 	}
@@ -220,7 +189,7 @@ func TestSeriesCount(t *testing.T) {
 	if ds.SeriesCount() != 1 {
 		t.Errorf("expected 1 got %d", ds.ValueCount())
 	}
-	ds.Results[0] = nil
+	ds.Results[0] = Result{}
 	if ds.SeriesCount() != 0 {
 		t.Errorf("expected 0 got %d", ds.ValueCount())
 	}

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 // Package timeseries defines the interface for managing time seres objects
 // and provides time range manipulation capabilities
 package timeseries

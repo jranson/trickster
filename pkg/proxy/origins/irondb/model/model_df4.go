@@ -86,8 +86,8 @@ func (se *DF4SeriesEnvelope) ValueCount() int64 {
 }
 
 // TimestampCount returns the number of unique timestamps across the timeseries.
-func (se *DF4SeriesEnvelope) TimestampCount() int {
-	return int(se.Head.Count)
+func (se *DF4SeriesEnvelope) TimestampCount() int64 {
+	return se.Head.Count
 }
 
 type metricData struct {
@@ -305,11 +305,11 @@ func (se *DF4SeriesEnvelope) CropToSize(sz int, t time.Time,
 	}
 
 	tc := se.TimestampCount()
-	if len(se.Data) == 0 || tc <= sz {
+	if len(se.Data) == 0 || tc <= int64(sz) {
 		return
 	}
 
-	rc := tc - sz // removal count
+	rc := tc - int64(sz) // removal count
 	newData := [][]interface{}{}
 	for _, data := range se.Data {
 		newData = append(newData, data[rc:])

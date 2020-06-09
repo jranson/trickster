@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+// Package model is a test utility package that serializes between a *DataSet
+// and the  Prometheus HTTP API JSON Format
 package model
 
 import (
@@ -23,8 +25,6 @@ import (
 	"io"
 	"sort"
 	"strconv"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
@@ -49,6 +49,16 @@ type WFResult struct {
 	Value  []interface{}   `json:"value"`
 }
 
+func Modeler() *timeseries.Modeler {
+	return &timeseries.Modeler{
+		WireMarshalWriter: MarshalTimeseriesWriter,
+		WireMarshaler:     MarshalTimeseries,
+		WireUnmarshaler:   UnmarshalTimeseries,
+		CacheMarshaler:    timeseries.MarshalDataSet,
+		CacheUnmarshaler:  timeseries.UnmarshalDataSet,
+	}
+}
+
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
 func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	wfd := &WFDocument{}
@@ -61,7 +71,6 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 		Results: []timeseries.Result{{}},
 	}
 	ds.Results[0].SeriesList = make([]*timeseries.Series, len(wfd.Data.Results))
-	//r.SeriesLookup = make(timeseries.SeriesLookup)
 
 	for i, pr := range wfd.Data.Results {
 		sh := timeseries.SeriesHeader{
@@ -75,60 +84,51 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 			DataType: timeseries.String,
 		}
 		sh.FieldsList = []timeseries.FieldDefinition{fd}
+		//sh.FieldsLookup = map[string]*timeseries.FieldDefinition{"value": fd}
+		sh.CalculateHash()
 		var pts timeseries.Points
 		l := len(pr.Values)
-		var ps int64
 		if wfd.Data.ResultType == "matrix" && l > 0 {
 			pts = make(timeseries.Points, l)
-			var wg sync.WaitGroup
 			for j, v := range pr.Values {
-				wg.Add(1)
-				go func(vals []interface{}, k int) {
-					pt, _ := pointFromValues(vals)
-					atomic.AddInt64(&ps, int64(pt.Size))
-					pts[k] = pt
-					wg.Done()
-				}(v, j)
+				pt := pointFromValues(v)
+				pts[j] = pt
 			}
-			wg.Wait()
 			// hello extentlist??? TODO
 		} else if wfd.Data.ResultType == "vector" && len(pr.Value) == 2 {
 			pts = make(timeseries.Points, 1)
-			pt, _ := pointFromValues(pr.Value)
-			ps = int64(pt.Size)
+			pt := pointFromValues(pr.Value)
 			pts[0] = pt
 			t := time.Unix(0, int64(pt.Epoch))
 			ds.ExtentList = timeseries.ExtentList{timeseries.Extent{Start: t, End: t}}
 		}
-		sh.CalculateSize()
 		s := &timeseries.Series{
-			Header:    sh,
-			Points:    pts,
-			PointSize: ps,
+			Header: sh,
+			Points: pts,
 		}
 		ds.Results[0].SeriesList[i] = s
 	}
 	return ds, nil
 }
 
-func pointFromValues(v []interface{}) (timeseries.Point, error) {
+func pointFromValues(v []interface{}) timeseries.Point {
 	if len(v) != 2 {
-		return timeseries.Point{}, timeseries.ErrInvalidBody
+		return timeseries.Point{}
 	}
 	var f1 float64
 	var s string
 	var ok bool
 	if f1, ok = v[0].(float64); !ok {
-		return timeseries.Point{}, timeseries.ErrInvalidBody
+		return timeseries.Point{}
 	}
 	if s, ok = v[1].(string); !ok {
-		return timeseries.Point{}, timeseries.ErrInvalidBody
+		return timeseries.Point{}
 	}
 	return timeseries.Point{
 		Epoch:  timeseries.Epoch(f1) * 1000000000,
-		Size:   len(s) + 12,
+		Size:   len(s) + 16,
 		Values: []interface{}{s},
-	}, nil
+	}
 }
 
 // MarshalTimeseries converts a Timeseries into a JSON blob

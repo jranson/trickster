@@ -14,15 +14,19 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 import "io"
 
 // Modeler is a container object for Timeseries marshaling operations
 type Modeler struct {
-	Unmarshaler   UnmarshalerFunc   `msg:"-"`
-	Marshaler     MarshalerFunc     `msg:"-"`
-	MarshalWriter MarshalWriterFunc `msg:"-"`
+	WireUnmarshaler   UnmarshalerFunc   `msg:"-"`
+	WireMarshaler     MarshalerFunc     `msg:"-"`
+	WireMarshalWriter MarshalWriterFunc `msg:"-"`
+	CacheUnmarshaler  UnmarshalerFunc   `msg:"-"`
+	CacheMarshaler    MarshalerFunc     `msg:"-"`
 }
 
 // UnmarshalerFunc describes a function that unmarshals a Timeseries
@@ -35,6 +39,13 @@ type MarshalerFunc func(Timeseries) ([]byte, error)
 type MarshalWriterFunc func(Timeseries, io.Writer) error
 
 // NewModeler factories a modeler with the provided modeling functions
-func NewModeler(u UnmarshalerFunc, m MarshalerFunc, mw MarshalWriterFunc) *Modeler {
-	return &Modeler{Unmarshaler: u, Marshaler: m, MarshalWriter: mw}
+func NewModeler(wu UnmarshalerFunc, wm MarshalerFunc, wmw MarshalWriterFunc,
+	cu UnmarshalerFunc, cm MarshalerFunc) *Modeler {
+	return &Modeler{
+		WireUnmarshaler:   wu,
+		WireMarshaler:     wm,
+		WireMarshalWriter: wmw,
+		CacheUnmarshaler:  cu,
+		CacheMarshaler:    cm,
+	}
 }

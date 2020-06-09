@@ -206,13 +206,12 @@ func (se *SeriesEnvelope) ValueCount() int64 {
 }
 
 // TimestampCount returns the number of unique timestamps across the timeseries.
-func (se *SeriesEnvelope) TimestampCount() int {
+func (se *SeriesEnvelope) TimestampCount() int64 {
 	ts := map[int64]struct{}{}
 	for _, dp := range se.Data {
 		ts[dp.Time.Unix()] = struct{}{}
 	}
-
-	return len(ts)
+	return int64(len(ts))
 }
 
 // Merge merges the provided Timeseries list into the base Timeseries (in the

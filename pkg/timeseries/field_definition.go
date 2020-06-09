@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 // Field Data Types
@@ -37,8 +39,8 @@ type FieldDefinition struct {
 }
 
 // Clone returns a perfect, new copy of the FieldDefinition
-func (fd *FieldDefinition) Clone() *FieldDefinition {
-	return &FieldDefinition{
+func (fd FieldDefinition) Clone() FieldDefinition {
+	return FieldDefinition{
 		Name:     fd.Name,
 		DataType: fd.DataType,
 	}

@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
+
+import "sync/atomic"
 
 // Epoch represents an Epoch timestamp in Nanoseconds and has possible values
 // between 1970/1/1 and 2262/4/12
@@ -26,23 +30,18 @@ type Epochs []Epoch
 // Point represents a timeseries data point
 type Point struct {
 	Epoch  Epoch         `msg:"epoch"`
-	Size   int           `msg:"-"`
-	Header *SeriesHeader `msg:"-"`
+	Size   int           `msg:"size"`
 	Values []interface{} `msg:"values"`
 }
 
 // Points is a slice of type *Point
-type Points []*Point
-
-// EpochLookup is a map of Epoch Timestamps
-type EpochLookup map[Epoch]bool
+type Points []Point
 
 // Clone returns a perfect copy of the Point
-func (p *Point) Clone() *Point {
-	clone := &Point{
-		Epoch:  p.Epoch,
-		Size:   p.Size,
-		Header: p.Header,
+func (p *Point) Clone() Point {
+	clone := Point{
+		Epoch: p.Epoch,
+		Size:  p.Size,
 	}
 	if p.Values != nil {
 		clone.Values = make([]interface{}, len(p.Values))
@@ -52,20 +51,21 @@ func (p *Point) Clone() *Point {
 }
 
 // Size returns the memory utilization of the Points in bytes
-func (p Points) Size() int {
-	var c int
+func (p Points) Size() int64 {
+	var c int64
 	for _, pt := range p {
-		c += pt.Size
+		go func(s int64) {
+			atomic.AddInt64(&c, s)
+		}(int64(pt.Size))
 	}
 	return c
 }
 
 // Clone returns a perfect copy of the Points
-func (p Points) Clone(sh *SeriesHeader) Points {
+func (p Points) Clone() Points {
 	clone := make(Points, len(p))
 	for i, pt := range p {
 		clone[i] = pt.Clone()
-		clone[i].Header = sh
 	}
 	return clone
 }

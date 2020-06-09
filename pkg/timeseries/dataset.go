@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 import (
@@ -31,11 +33,11 @@ type DataSet struct {
 	Status string `msg:"status"`
 	// ExtentList is the list of Extents (time ranges) represented in the Results
 	ExtentList ExtentList `msg:"extent_list"`
-	// Timestamps is map of all timestamps in the DataSet
-	Timestamps EpochLookup `msg:"timestamps"`
+	// // Timestamps is map of all timestamps in the DataSet
+	// Timestamps map[Epoch]bool `msg:"timestamps"`
 	// Results is the list of type Result. Each Result represents information about a
 	// different statement in the source query for this DataSet
-	Results []*Result `msg:"results"`
+	Results []Result `msg:"results"`
 	// UpdateLock is used to synchronize updates to the DataSet
 	UpdateLock sync.Mutex `msg:"-"`
 	// Error is a container for any DataSet-level Errors
@@ -70,23 +72,14 @@ func (ds *DataSet) Clone() Timeseries {
 		RangeCropper: ds.RangeCropper,
 		OutputFormat: ds.OutputFormat,
 		ExtentList:   make(ExtentList, len(ds.ExtentList)),
-		Timestamps:   make(EpochLookup),
-		Results:      make([]*Result, len(ds.Results)),
+		Results:      make([]Result, len(ds.Results)),
 	}
 	if ds.TimeRangeQuery != nil {
 		clone.TimeRangeQuery = ds.TimeRangeQuery.Clone()
 	}
 	copy(clone.ExtentList, ds.ExtentList)
-	for i, r := range ds.Results {
-		clone.Results[i] = r.Clone()
-		for _, s := range r.SeriesList {
-			for _, p := range s.Points {
-				var ok bool
-				if _, ok = clone.Timestamps[p.Epoch]; !ok {
-					clone.Timestamps[p.Epoch] = true
-				}
-			}
-		}
+	for i := range ds.Results {
+		clone.Results[i] = ds.Results[i].Clone()
 	}
 	return clone
 }
@@ -112,6 +105,13 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 
 	orderMarkers := make([]Hashes, 0)
 
+	sl := make(SeriesLookup)
+	for i := range ds.Results {
+		for _, s := range ds.Results[i].SeriesList {
+			sl[s.Header.CalculateHash()] = s
+		}
+	}
+
 	for _, ts := range collection {
 		if ts == nil {
 			continue
@@ -121,47 +121,32 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 			continue
 		}
 		om := make([]Hashes, 0, ds2.SeriesCount())
-		for ri, r := range ds2.Results {
-			if r == nil {
-				continue
-			}
+		for ri := range ds2.Results {
 			if ri >= len(ds.Results) {
 				mtx.Lock()
 				ds.Results = append(ds.Results, ds2.Results[ri:]...)
 				mtx.Unlock()
 				break
 			}
-			for i := range r.SeriesList {
-				if r.SeriesList[i] == nil || r.SeriesList[i].Header == nil {
+			for i := range ds2.Results[ri].SeriesList {
+				if ds2.Results[ri].SeriesList[i] == nil {
 					continue
 				}
 				wg.Add(1)
-				go func(s *Series) {
+				go func(s *Series, rj int) {
 					mtx.Lock()
 					var es *Series
-					if es, ok = ds.Results[ri].SeriesLookup[s.Header.Hash]; !ok || es == nil {
-						om = append(om, r.Hashes())
-						ds.Results[ri].SeriesLookup[s.Header.Hash] = s
-						ds.Results[ri].SeriesList = append(ds.Results[ri].SeriesList, s)
-						var ok1 bool
-						for _, p := range s.Points {
-							if _, ok1 = ds.Timestamps[p.Epoch]; !ok1 {
-								ds.Timestamps[p.Epoch] = true
-							}
-						}
+					h := s.Header.CalculateHash()
+					if es, ok = sl[h]; !ok || es == nil {
+						om = append(om, ds2.Results[rj].Hashes())
+						sl[h] = s
+						ds.Results[rj].SeriesList = append(ds.Results[rj].SeriesList, s)
 						mtx.Unlock()
 						wg.Done()
 						return
 					}
-
-					for _, p := range s.Points {
-						es.Points = append(es.Points, p)
-						if _, ok = ds.Timestamps[p.Epoch]; !ok {
-							ds.Timestamps[p.Epoch] = true
-						}
-					}
 					mtx.Unlock()
-
+					es.Points = append(es.Points, s.Points...)
 					// This will sort and dupe kill the list of points, keeping the newest version
 					if sortSeries {
 						sort.Sort(es.Points)
@@ -173,7 +158,7 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 						} else {
 							j := 1
 							for i := 1; i < n; i++ {
-								if es.Points[i] != es.Points[i-1] {
+								if es.Points[i].Epoch != es.Points[i-1].Epoch {
 									es.Points[j] = es.Points[i]
 									j++
 								}
@@ -183,21 +168,19 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 							es.Points = x
 						}
 					}
+					es.PointSize = es.Points.Size()
 					wg.Done()
-				}(r.SeriesList[i])
+				}(ds2.Results[ri].SeriesList[i], ri)
 			}
 			wg.Wait()
 			ds.ExtentList = append(ds.ExtentList, ds2.ExtentList...)
 			orderMarkers = append(orderMarkers, om...)
 		}
 	}
-
 	ds.ExtentList = ds.ExtentList.Compress(ds.Step())
-
 	// other housekeeping
 	// e.g., if len(orderMarkers) > 0, we potentially got reordering to do.
 	// Figure out if this ^^^ needs to be handled by result
-
 }
 
 // CropToSize reduces the number of elements in the Timeseries to the provided count, by evicting elements
@@ -269,13 +252,13 @@ func (ds *DataSet) DefaultRangeCropper(e Extent) {
 		estDelCnt += int((dsEndNS - endNS) / Epoch(ds.Step()))
 	}
 	delPoints := make(map[Epoch]bool)
-	for i, r := range ds.Results {
-		if len(r.SeriesList) == 0 {
+	for i := range ds.Results {
+		if len(ds.Results[i].SeriesList) == 0 {
 			ds.ExtentList = ds.ExtentList.Crop(e)
 			continue
 		}
 		deletes := make(map[int]bool)
-		for j, s := range r.SeriesList {
+		for j, s := range ds.Results[i].SeriesList {
 			start := -1
 			end := -1
 			for pi, p := range s.Points {
@@ -304,41 +287,30 @@ func (ds *DataSet) DefaultRangeCropper(e Extent) {
 				}
 				if start > 0 {
 					for n := 0; n < start; n++ {
-						if s.Points[n] != nil {
-							delPoints[s.Points[n].Epoch] = true
-						}
+						delPoints[s.Points[n].Epoch] = true
 					}
 				}
 				if end < len(s.Points)-1 {
 					for n := len(s.Points) - 1; n >= end; n-- {
-						if s.Points[n] != nil {
-							delPoints[s.Points[n].Epoch] = true
-						}
+						delPoints[s.Points[n].Epoch] = true
 					}
 				}
 				pts := make(Points, len(s.Points[start:end]))
 				copy(pts, s.Points[start:end])
-				ds.Results[i].SeriesList[j].Points = pts
+				s.Points = pts
+				s.PointSize = pts.Size()
 			} else {
 				deletes[j] = true
 			}
 		}
 		if len(deletes) > 0 {
-			list := make([]*Series, len(r.SeriesList))
-			lookup := make(SeriesLookup)
+			list := make([]*Series, len(ds.Results[i].SeriesList))
 			for j, s := range ds.Results[i].SeriesList {
 				if _, ok := deletes[j]; !ok {
 					list = append(list, s)
-					lookup[s.Header.Hash] = s
 				}
 			}
 			ds.Results[i].SeriesList = list
-			ds.Results[i].SeriesLookup = lookup
-		}
-		if len(delPoints) > 0 {
-			for epoch := range delPoints {
-				delete(ds.Timestamps, epoch)
-			}
 		}
 	}
 	ds.ExtentList = ds.ExtentList.Crop(e)
@@ -347,11 +319,8 @@ func (ds *DataSet) DefaultRangeCropper(e Extent) {
 // SeriesCount returns the count of all Series across all Results in the DataSet
 func (ds *DataSet) SeriesCount() int {
 	var cnt int
-	for _, r := range ds.Results {
-		if r == nil {
-			continue
-		}
-		cnt += len(r.SeriesList)
+	for i := range ds.Results {
+		cnt += len(ds.Results[i].SeriesList)
 	}
 	return cnt
 }
@@ -359,11 +328,11 @@ func (ds *DataSet) SeriesCount() int {
 // ValueCount returns the count of all values across all Series in the DataSet
 func (ds *DataSet) ValueCount() int64 {
 	var cnt int64
-	for _, r := range ds.Results {
-		if r == nil || len(r.SeriesList) == 0 {
+	for i := range ds.Results {
+		if len(ds.Results[i].SeriesList) == 0 {
 			continue
 		}
-		for _, s := range r.SeriesList {
+		for _, s := range ds.Results[i].SeriesList {
 			if s == nil {
 				continue
 			}
@@ -378,13 +347,9 @@ func (ds *DataSet) Size() int64 {
 	c := int64(len(ds.Status) +
 		49 + // StepDuration=8 Mutex=8 OutputFormat=1 4xFuncs=32
 		(len(ds.ExtentList) * 72) +
-		(len(ds.Timestamps) * 9) +
 		len(ds.Error))
-	for _, r := range ds.Results {
-		if r == nil {
-			continue
-		}
-		c += int64(r.Size())
+	for i := range ds.Results {
+		c += int64(ds.Results[i].Size())
 	}
 	return c
 }
@@ -403,8 +368,8 @@ func (ds *DataSet) Step() time.Duration {
 }
 
 // TimestampCount returns the count of unique timestampes across all series in the DataSet
-func (ds *DataSet) TimestampCount() int {
-	return len(ds.Timestamps)
+func (ds *DataSet) TimestampCount() int64 {
+	return ds.ExtentList.TimestampCount(ds.Step())
 }
 
 // Extents returns the DataSet's ExentList
@@ -427,4 +392,20 @@ func (ds *DataSet) Sort() {
 		ds.Sorter()
 		return
 	}
+}
+
+// UnmarshalDataSet unmarshals the dataset from a msgpack-formatted byte slice
+func UnmarshalDataSet(b []byte) (Timeseries, error) {
+	ds := &DataSet{}
+	_, err := ds.UnmarshalMsg(b)
+	return ds, err
+}
+
+// MarshalDataSet marshals the dataset into a msgpack-formatted byte slice
+func MarshalDataSet(ts Timeseries) ([]byte, error) {
+	ds, ok := ts.(*DataSet)
+	if !ok {
+		return nil, ErrUnknownFormat
+	}
+	return ds.MarshalMsg(nil)
 }

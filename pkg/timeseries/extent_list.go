@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//go:generate msgp
+
 package timeseries
 
 import (
@@ -46,12 +48,10 @@ func (el ExtentList) InsideOf(e Extent) bool {
 	if x == 0 {
 		return false
 	}
-
 	return ((!el[0].Start.Before(e.Start)) &&
 		(!el[0].Start.After(e.End)) &&
 		(!el[x-1].End.Before(e.Start)) &&
 		(!el[x-1].End.After(e.End)))
-
 }
 
 // OutsideOf returns true if the provided extent falls completely
@@ -164,6 +164,19 @@ func (el ExtentList) Clone() ExtentList {
 		c[i].Start = el[i].Start
 		c[i].End = el[i].End
 		c[i].LastUsed = el[i].LastUsed
+	}
+	return c
+}
+
+// TimestampCount returns the calculated number of timestamps based on the extents
+// in the list and the provided duration
+func (el ExtentList) TimestampCount(d time.Duration) int64 {
+	var c int64
+	for i := range el {
+		if el[i].Start.IsZero() || el[i].End.IsZero() {
+			continue
+		}
+		c += ((el[i].End.UnixNano() - el[i].Start.UnixNano()) / d.Nanoseconds()) + 1
 	}
 	return c
 }
