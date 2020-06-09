@@ -34,9 +34,8 @@ type Point struct {
 // Points is a slice of type *Point
 type Points []*Point
 
-// PointsLookup is a map for getting a Point based on its epoch
-// and the header hash for the series holding it
-type PointsLookup map[Epoch]map[Hash]*Point
+// EpochLookup is a map of Epoch Timestamps
+type EpochLookup map[Epoch]bool
 
 // Clone returns a perfect copy of the Point
 func (p *Point) Clone() *Point {

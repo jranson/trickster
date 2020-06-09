@@ -56,9 +56,9 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	}
 	r := &timeseries.Result{}
 	ds := &timeseries.DataSet{
-		Status:       wfd.Status,
-		Results:      []*timeseries.Result{r},
-		PointsLookup: make(timeseries.PointsLookup),
+		Status:     wfd.Status,
+		Results:    []*timeseries.Result{r},
+		Timestamps: make(timeseries.EpochLookup),
 	}
 	r.SeriesList = make([]*timeseries.Series, len(wfd.Data.Results))
 	r.SeriesLookup = make(timeseries.SeriesLookup)
@@ -75,7 +75,7 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 			DataType: timeseries.String,
 		}
 		sh.FieldsList = []*timeseries.FieldDefinition{fd}
-		sh.FieldsLookup = map[string]*timeseries.FieldDefinition{"value": fd}
+		//sh.FieldsLookup = map[string]*timeseries.FieldDefinition{"value": fd}
 		sh.CalculateHash()
 		var pts timeseries.Points
 		var ok bool
@@ -85,12 +85,9 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 			for j, v := range pr.Values {
 				pt := pointFromValues(v)
 				pt.Header = sh
-				var pm map[timeseries.Hash]*timeseries.Point
-				if pm, ok = ds.PointsLookup[pt.Epoch]; !ok {
-					pm = make(map[timeseries.Hash]*timeseries.Point)
-					ds.PointsLookup[pt.Epoch] = pm
+				if _, ok = ds.Timestamps[pt.Epoch]; !ok {
+					ds.Timestamps[pt.Epoch] = true
 				}
-				pm[sh.Hash] = pt
 				pts[j] = pt
 			}
 			// hello extentlist??? TODO
@@ -98,12 +95,9 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 			pts = make(timeseries.Points, 1)
 			pt := pointFromValues(pr.Value)
 			pt.Header = sh
-			var pm map[timeseries.Hash]*timeseries.Point
-			if pm, ok = ds.PointsLookup[pt.Epoch]; !ok {
-				pm = make(map[timeseries.Hash]*timeseries.Point)
-				ds.PointsLookup[pt.Epoch] = pm
+			if _, ok = ds.Timestamps[pt.Epoch]; !ok {
+				ds.Timestamps[pt.Epoch] = true
 			}
-			pm[sh.Hash] = pt
 			pts[0] = pt
 			t := time.Unix(0, int64(pt.Epoch))
 			ds.ExtentList = timeseries.ExtentList{timeseries.Extent{Start: t, End: t}}

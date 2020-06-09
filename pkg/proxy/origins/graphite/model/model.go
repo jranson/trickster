@@ -117,8 +117,8 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	var err error
 	r := &timeseries.Result{}
 	ds := &timeseries.DataSet{
-		PointsLookup: make(timeseries.PointsLookup),
-		Results:      []*timeseries.Result{r},
+		Timestamps: make(timeseries.EpochLookup),
+		Results:    []*timeseries.Result{r},
 	}
 	lines := strings.Split(string(data), "\n")
 	sl := make([]*timeseries.Series, len(lines))
@@ -177,10 +177,10 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 				DataType: timeseries.Float64,
 			}
 			sh := &timeseries.SeriesHeader{
-				Name:         headerParts[0],
-				FieldsLookup: map[string]*timeseries.FieldDefinition{"value": fd},
-				FieldsList:   []*timeseries.FieldDefinition{fd},
-				Size:         len(headerParts[0]) + 35,
+				Name: headerParts[0],
+				//FieldsLookup: map[string]*timeseries.FieldDefinition{"value": fd},
+				FieldsList: []*timeseries.FieldDefinition{fd},
+				Size:       len(headerParts[0]) + 35,
 			}
 			sh.CalculateHash()
 			width := end - start
@@ -209,13 +209,10 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 					Values: []interface{}{v},
 				}
 				ds.UpdateLock.Lock()
-				var m map[timeseries.Hash]*timeseries.Point
 				var ok bool
-				if m, ok = ds.PointsLookup[epoch]; !ok {
-					m = make(map[timeseries.Hash]*timeseries.Point)
-					ds.PointsLookup[epoch] = m
+				if _, ok = ds.Timestamps[epoch]; !ok {
+					ds.Timestamps[epoch] = true
 				}
-				m[sh.Hash] = point
 				points[j] = point
 				ds.UpdateLock.Unlock()
 				j++

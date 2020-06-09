@@ -27,13 +27,9 @@ func testDataSet() *DataSet {
 		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(10, 0)}},
 		TimeRangeQuery: &TimeRangeQuery{Step: time.Duration(5 * Second)},
 	}
-	ds.PointsLookup = PointsLookup{
-		ds.Results[0].SeriesList[0].Points[0].Epoch: map[Hash]*Point{
-			ds.Results[0].SeriesList[0].Header.Hash: ds.Results[0].SeriesList[0].Points[0],
-		},
-		ds.Results[0].SeriesList[0].Points[1].Epoch: map[Hash]*Point{
-			ds.Results[0].SeriesList[0].Header.Hash: ds.Results[0].SeriesList[0].Points[1],
-		},
+	ds.Timestamps = EpochLookup{
+		ds.Results[0].SeriesList[0].Points[0].Epoch: true,
+		ds.Results[0].SeriesList[0].Points[1].Epoch: true,
 	}
 	ds.Merger = ds.DefaultMerger
 	ds.SizeCropper = ds.DefaultSizeCropper
@@ -131,25 +127,22 @@ func testDataSet2() *DataSet {
 		ExtentList:     ExtentList{Extent{Start: time.Unix(5, 0), End: time.Unix(30, 0)}},
 	}
 
-	buildPointsLookup := func(ds *DataSet) PointsLookup {
-		pl := make(PointsLookup)
+	buildTimestamps := func(ds *DataSet) EpochLookup {
+		pl := make(EpochLookup)
 		for _, r := range ds.Results {
 			for _, s := range r.SeriesList {
 				for _, p := range s.Points {
-					var m map[Hash]*Point
 					var ok bool
-					if m, ok = pl[p.Epoch]; !ok {
-						m = map[Hash]*Point{s.Header.Hash: p}
-						pl[p.Epoch] = m
+					if _, ok = pl[p.Epoch]; !ok {
+						pl[p.Epoch] = true
 					}
-					m[s.Header.Hash] = p
 				}
 			}
 		}
 		return pl
 	}
 
-	ds.PointsLookup = buildPointsLookup(ds)
+	ds.Timestamps = buildTimestamps(ds)
 	ds.Merger = ds.DefaultMerger
 	ds.SizeCropper = ds.DefaultSizeCropper
 	ds.RangeCropper = ds.DefaultRangeCropper

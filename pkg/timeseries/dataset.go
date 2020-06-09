@@ -31,8 +31,8 @@ type DataSet struct {
 	Status string `msg:"status"`
 	// ExtentList is the list of Extents (time ranges) represented in the Results
 	ExtentList ExtentList `msg:"extent_list"`
-	// PointsLookup is map allowing lookup of a Point by epoch and series hash
-	PointsLookup PointsLookup `msg:"-"`
+	// Timestamps is map of all timestamps in the DataSet
+	Timestamps EpochLookup `msg:"timestamps"`
 	// Results is the list of type Result. Each Result represents information about a
 	// different statement in the source query for this DataSet
 	Results []*Result `msg:"results"`
@@ -70,7 +70,7 @@ func (ds *DataSet) Clone() Timeseries {
 		RangeCropper: ds.RangeCropper,
 		OutputFormat: ds.OutputFormat,
 		ExtentList:   make(ExtentList, len(ds.ExtentList)),
-		PointsLookup: make(PointsLookup),
+		Timestamps:   make(EpochLookup),
 		Results:      make([]*Result, len(ds.Results)),
 	}
 	if ds.TimeRangeQuery != nil {
@@ -81,13 +81,10 @@ func (ds *DataSet) Clone() Timeseries {
 		clone.Results[i] = r.Clone()
 		for _, s := range r.SeriesList {
 			for _, p := range s.Points {
-				var m map[Hash]*Point
 				var ok bool
-				if m, ok = clone.PointsLookup[p.Epoch]; !ok {
-					m = map[Hash]*Point{s.Header.Hash: p}
-					clone.PointsLookup[p.Epoch] = m
+				if _, ok = clone.Timestamps[p.Epoch]; !ok {
+					clone.Timestamps[p.Epoch] = true
 				}
-				m[s.Header.Hash] = p
 			}
 		}
 	}
@@ -146,28 +143,22 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 						om = append(om, r.Hashes())
 						ds.Results[ri].SeriesLookup[s.Header.Hash] = s
 						ds.Results[ri].SeriesList = append(ds.Results[ri].SeriesList, s)
-						var m map[Hash]*Point
 						var ok1 bool
 						for _, p := range s.Points {
-							if m, ok1 = ds.PointsLookup[p.Epoch]; !ok1 {
-								ds.PointsLookup[p.Epoch] = map[Hash]*Point{s.Header.Hash: p}
-								continue
+							if _, ok1 = ds.Timestamps[p.Epoch]; !ok1 {
+								ds.Timestamps[p.Epoch] = true
 							}
-							m[s.Header.Hash] = p
 						}
 						mtx.Unlock()
 						wg.Done()
 						return
 					}
 
-					var m map[Hash]*Point
 					for _, p := range s.Points {
 						es.Points = append(es.Points, p)
-						if m, ok = ds.PointsLookup[p.Epoch]; !ok {
-							ds.PointsLookup[p.Epoch] = map[Hash]*Point{es.Header.Hash: p}
-							continue
+						if _, ok = ds.Timestamps[p.Epoch]; !ok {
+							ds.Timestamps[p.Epoch] = true
 						}
-						m[es.Header.Hash] = p
 					}
 					mtx.Unlock()
 
@@ -346,7 +337,7 @@ func (ds *DataSet) DefaultRangeCropper(e Extent) {
 		}
 		if len(delPoints) > 0 {
 			for epoch := range delPoints {
-				delete(ds.PointsLookup, epoch)
+				delete(ds.Timestamps, epoch)
 			}
 		}
 	}
@@ -387,7 +378,7 @@ func (ds *DataSet) Size() int64 {
 	c := int64(len(ds.Status) +
 		49 + // StepDuration=8 Mutex=8 OutputFormat=1 4xFuncs=32
 		(len(ds.ExtentList) * 72) +
-		(len(ds.PointsLookup) * 16) +
+		(len(ds.Timestamps) * 9) +
 		len(ds.Error))
 	for _, r := range ds.Results {
 		if r == nil {
@@ -395,7 +386,6 @@ func (ds *DataSet) Size() int64 {
 		}
 		c += int64(r.Size())
 	}
-	c += int64(len(ds.PointsLookup) * (ds.SeriesCount() * 16))
 	return c
 }
 
@@ -414,7 +404,7 @@ func (ds *DataSet) Step() time.Duration {
 
 // TimestampCount returns the count of unique timestampes across all series in the DataSet
 func (ds *DataSet) TimestampCount() int {
-	return len(ds.PointsLookup)
+	return len(ds.Timestamps)
 }
 
 // Extents returns the DataSet's ExentList

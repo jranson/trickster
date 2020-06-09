@@ -37,8 +37,6 @@ type SeriesHeader struct {
 	Name string `msg:"name"`
 	// Tags is the map of tags associated with the Series
 	Tags Tags `msg:"tags"`
-	// // FieldsLookup is map to lookup the definition of a named field
-	// FieldsLookup map[string]*FieldDefinition `msg:"-"`
 	// FieldsList is the ordered list of fields in the Series
 	FieldsList []*FieldDefinition `msg:"fields"`
 	// TimestampIndex is the index of the TimeStamp field in the output when
