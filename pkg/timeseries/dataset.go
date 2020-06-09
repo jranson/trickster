@@ -63,16 +63,18 @@ func (ds *DataSet) Clone() Timeseries {
 	ds.UpdateLock.Lock()
 	defer ds.UpdateLock.Unlock()
 	clone := &DataSet{
-		Error:          ds.Error,
-		Sorter:         ds.Sorter,
-		Merger:         ds.Merger,
-		SizeCropper:    ds.SizeCropper,
-		RangeCropper:   ds.RangeCropper,
-		OutputFormat:   ds.OutputFormat,
-		ExtentList:     make(ExtentList, len(ds.ExtentList)),
-		PointsLookup:   make(PointsLookup),
-		Results:        make([]*Result, len(ds.Results)),
-		TimeRangeQuery: ds.TimeRangeQuery.Clone(),
+		Error:        ds.Error,
+		Sorter:       ds.Sorter,
+		Merger:       ds.Merger,
+		SizeCropper:  ds.SizeCropper,
+		RangeCropper: ds.RangeCropper,
+		OutputFormat: ds.OutputFormat,
+		ExtentList:   make(ExtentList, len(ds.ExtentList)),
+		PointsLookup: make(PointsLookup),
+		Results:      make([]*Result, len(ds.Results)),
+	}
+	if ds.TimeRangeQuery != nil {
+		clone.TimeRangeQuery = ds.TimeRangeQuery.Clone()
 	}
 	copy(clone.ExtentList, ds.ExtentList)
 	for i, r := range ds.Results {
