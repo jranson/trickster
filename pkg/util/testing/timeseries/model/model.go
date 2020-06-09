@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 )
 
 // WFDocument the Wire Format Document for the timeseries
@@ -44,7 +45,7 @@ type WFData struct {
 
 // WFResult is the Result section of the WFD
 type WFResult struct {
-	Metric timeseries.Tags `json:"metric"`
+	Metric dataset.Tags    `json:"metric"`
 	Values [][]interface{} `json:"values"`
 	Value  []interface{}   `json:"value"`
 }
@@ -54,8 +55,8 @@ func Modeler() *timeseries.Modeler {
 		WireMarshalWriter: MarshalTimeseriesWriter,
 		WireMarshaler:     MarshalTimeseries,
 		WireUnmarshaler:   UnmarshalTimeseries,
-		CacheMarshaler:    timeseries.MarshalDataSet,
-		CacheUnmarshaler:  timeseries.UnmarshalDataSet,
+		CacheMarshaler:    dataset.MarshalDataSet,
+		CacheUnmarshaler:  dataset.UnmarshalDataSet,
 	}
 }
 
@@ -66,43 +67,43 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	if err != nil {
 		return nil, err
 	}
-	ds := &timeseries.DataSet{
+	ds := &dataset.DataSet{
 		Status:  wfd.Status,
-		Results: []timeseries.Result{{}},
+		Results: []dataset.Result{{}},
 	}
-	ds.Results[0].SeriesList = make([]*timeseries.Series, len(wfd.Data.Results))
+	ds.Results[0].SeriesList = make([]*dataset.Series, len(wfd.Data.Results))
 
 	for i, pr := range wfd.Data.Results {
-		sh := timeseries.SeriesHeader{
+		sh := dataset.SeriesHeader{
 			Tags: pr.Metric,
 		}
 		if n, ok := pr.Metric["__name__"]; ok {
 			sh.Name = n
 		}
-		fd := timeseries.FieldDefinition{
+		fd := dataset.FieldDefinition{
 			Name:     "value",
-			DataType: timeseries.String,
+			DataType: dataset.String,
 		}
-		sh.FieldsList = []timeseries.FieldDefinition{fd}
+		sh.FieldsList = []dataset.FieldDefinition{fd}
 		//sh.FieldsLookup = map[string]*timeseries.FieldDefinition{"value": fd}
 		sh.CalculateHash()
-		var pts timeseries.Points
+		var pts dataset.Points
 		l := len(pr.Values)
 		if wfd.Data.ResultType == "matrix" && l > 0 {
-			pts = make(timeseries.Points, l)
+			pts = make(dataset.Points, l)
 			for j, v := range pr.Values {
 				pt := pointFromValues(v)
 				pts[j] = pt
 			}
 			// hello extentlist??? TODO
 		} else if wfd.Data.ResultType == "vector" && len(pr.Value) == 2 {
-			pts = make(timeseries.Points, 1)
+			pts = make(dataset.Points, 1)
 			pt := pointFromValues(pr.Value)
 			pts[0] = pt
 			t := time.Unix(0, int64(pt.Epoch))
 			ds.ExtentList = timeseries.ExtentList{timeseries.Extent{Start: t, End: t}}
 		}
-		s := &timeseries.Series{
+		s := &dataset.Series{
 			Header: sh,
 			Points: pts,
 		}
@@ -111,21 +112,21 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	return ds, nil
 }
 
-func pointFromValues(v []interface{}) timeseries.Point {
+func pointFromValues(v []interface{}) dataset.Point {
 	if len(v) != 2 {
-		return timeseries.Point{}
+		return dataset.Point{}
 	}
 	var f1 float64
 	var s string
 	var ok bool
 	if f1, ok = v[0].(float64); !ok {
-		return timeseries.Point{}
+		return dataset.Point{}
 	}
 	if s, ok = v[1].(string); !ok {
-		return timeseries.Point{}
+		return dataset.Point{}
 	}
-	return timeseries.Point{
-		Epoch:  timeseries.Epoch(f1) * 1000000000,
+	return dataset.Point{
+		Epoch:  dataset.Epoch(f1) * 1000000000,
 		Size:   len(s) + 16,
 		Values: []interface{}{s},
 	}
@@ -141,7 +142,7 @@ func MarshalTimeseries(ts timeseries.Timeseries) ([]byte, error) {
 // MarshalTimeseriesWriter converts a Timeseries into a JSON blob via an io.Writer
 func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 
-	ds, ok := ts.(*timeseries.DataSet)
+	ds, ok := ts.(*dataset.DataSet)
 	if !ok {
 		return timeseries.ErrUnknownFormat
 	}

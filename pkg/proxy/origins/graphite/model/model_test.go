@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 	"github.com/tricksterproxy/trickster/pkg/util/md5"
 )
 
@@ -108,7 +109,7 @@ func TestMarshalTimeseries(t *testing.T) {
 		t.Error(err)
 	}
 
-	cf := ts.(*timeseries.DataSet)
+	cf := ts.(*dataset.DataSet)
 	cf.OutputFormat = 2
 
 	_, err = MarshalTimeseries(ts)
@@ -124,7 +125,7 @@ func TestMarshalTimeseriesRaw(t *testing.T) {
 		t.Error(err)
 	}
 
-	cf := ts.(*timeseries.DataSet)
+	cf := ts.(*dataset.DataSet)
 
 	b := bytes.NewBuffer(nil)
 	err = marshalTimeseriesRaw(cf, b)
@@ -138,7 +139,7 @@ func TestMarshalTimeseriesRaw(t *testing.T) {
 		t.Errorf("expected [%s] got [%s]", testResult1, s)
 	}
 
-	cf.Results = append(cf.Results, timeseries.Result{})
+	cf.Results = append(cf.Results, dataset.Result{})
 	b = bytes.NewBuffer(nil)
 	err = marshalTimeseriesRaw(cf, b)
 	if len(b.Bytes()) != 0 {
@@ -167,7 +168,7 @@ func TestMarshalTimeseriesJSON(t *testing.T) {
 		t.Error(err)
 	}
 
-	cf := ts.(*timeseries.DataSet)
+	cf := ts.(*dataset.DataSet)
 
 	b = bytes.NewBuffer(nil)
 	err = marshalTimeseriesJSON(cf, b)

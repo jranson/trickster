@@ -32,12 +32,13 @@ import (
 	oo "github.com/tricksterproxy/trickster/pkg/proxy/origins/options"
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins/prometheus/model"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 	tl "github.com/tricksterproxy/trickster/pkg/util/log"
 )
 
 var testModeler = timeseries.NewModeler(model.UnmarshalTimeseries,
 	model.MarshalTimeseries, model.MarshalTimeseriesWriter,
-	timeseries.UnmarshalDataSet, timeseries.MarshalDataSet)
+	dataset.UnmarshalDataSet, dataset.MarshalDataSet)
 
 func TestPrometheusClientInterfacing(t *testing.T) {
 

@@ -25,9 +25,10 @@ import (
 	"time"
 
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 )
 
-var marshalers = map[byte]timeseries.Marshaler{
+var marshalers = map[byte]dataset.Marshaler{
 	0: marshalTimeseriesRaw,
 	1: marshalTimeseriesJSON,
 }
@@ -47,7 +48,7 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 	if ts == nil {
 		return timeseries.ErrUnknownFormat
 	}
-	if ds, ok := ts.(*timeseries.DataSet); ok {
+	if ds, ok := ts.(*dataset.DataSet); ok {
 		if marshaler, ok2 := marshalers[ds.OutputFormat]; ok2 {
 			return marshaler(ds, w)
 		}
@@ -55,7 +56,7 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 	return timeseries.ErrUnknownFormat
 }
 
-func marshalTimeseriesRaw(ds *timeseries.DataSet, w io.Writer) error {
+func marshalTimeseriesRaw(ds *dataset.DataSet, w io.Writer) error {
 	if ds == nil || len(ds.Results) != 1 || len(ds.ExtentList) != 1 {
 		return nil
 	}
@@ -83,7 +84,7 @@ func marshalTimeseriesRaw(ds *timeseries.DataSet, w io.Writer) error {
 	return nil
 }
 
-func marshalTimeseriesJSON(ds *timeseries.DataSet, w io.Writer) error {
+func marshalTimeseriesJSON(ds *dataset.DataSet, w io.Writer) error {
 	if ds == nil || len(ds.Results) != 1 || len(ds.ExtentList) != 1 {
 		return nil
 	}
@@ -121,11 +122,11 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 	}
 	var start, end, step int64
 	var err error
-	ds := &timeseries.DataSet{
-		Results: []timeseries.Result{{}},
+	ds := &dataset.DataSet{
+		Results: []dataset.Result{{}},
 	}
 	lines := strings.Split(string(data), "\n")
-	sl := make([]*timeseries.Series, len(lines))
+	sl := make([]*dataset.Series, len(lines))
 	//r.SeriesLookup = make(map[timeseries.Hash]*timeseries.Series)
 	wg := sync.WaitGroup{}
 	for i, line := range lines {
@@ -176,13 +177,13 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 				}
 				ds.UpdateLock.Unlock()
 			}
-			fd := timeseries.FieldDefinition{
+			fd := dataset.FieldDefinition{
 				Name:     "value",
-				DataType: timeseries.Float64,
+				DataType: dataset.Float64,
 			}
-			sh := timeseries.SeriesHeader{
+			sh := dataset.SeriesHeader{
 				Name:       headerParts[0],
-				FieldsList: []timeseries.FieldDefinition{fd},
+				FieldsList: []dataset.FieldDefinition{fd},
 			}
 			width := end - start
 			if width < 0 {
@@ -195,7 +196,7 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 				err = timeseries.ErrInvalidExtent
 				return
 			}
-			points := make(timeseries.Points, numPoints)
+			points := make(dataset.Points, numPoints)
 			var j int
 			for x := s; x <= n && j < numPoints; x += p {
 				var v float64
@@ -203,8 +204,8 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 					err = e
 					return
 				}
-				epoch := timeseries.Epoch(x * timeseries.Second)
-				point := timeseries.Point{
+				epoch := dataset.Epoch(x * timeseries.Second)
+				point := dataset.Point{
 					Epoch:  epoch,
 					Values: []interface{}{v},
 					Size:   20,
@@ -213,7 +214,7 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 				j++
 			}
 			sh.CalculateSize()
-			series := &timeseries.Series{
+			series := &dataset.Series{
 				Header:    sh,
 				Points:    points,
 				PointSize: int64(len(points)) * 20,

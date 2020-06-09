@@ -38,6 +38,7 @@ import (
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins/prometheus"
 	modelprom "github.com/tricksterproxy/trickster/pkg/proxy/origins/prometheus/model"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins/reverseproxycache"
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins/rule"
@@ -187,7 +188,7 @@ func registerOriginRoutes(router *mux.Router, conf *config.Config, k string,
 		client, err = prometheus.NewClient(k, o, mux.NewRouter(), c,
 			timeseries.NewModeler(modelprom.UnmarshalTimeseries,
 				modelprom.MarshalTimeseries, modelprom.MarshalTimeseriesWriter,
-				timeseries.UnmarshalDataSet, timeseries.MarshalDataSet))
+				dataset.UnmarshalDataSet, dataset.MarshalDataSet))
 	case "influxdb":
 		client, err = influxdb.NewClient(k, o, mux.NewRouter(), c,
 			timeseries.NewModeler(modelflux.UnmarshalTimeseries,

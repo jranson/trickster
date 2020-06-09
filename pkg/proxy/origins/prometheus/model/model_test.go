@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 )
 
 const testDoc = `{"status":"success","data":{"resultType":"matrix","result":[{` +
@@ -36,7 +37,7 @@ func TestUnmarshalTimeseries(t *testing.T) {
 		t.Error(err)
 	}
 
-	ds, ok := ts.(*timeseries.DataSet)
+	ds, ok := ts.(*dataset.DataSet)
 	if !ok {
 		t.Error(timeseries.ErrUnknownFormat)
 	}
