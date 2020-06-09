@@ -23,9 +23,9 @@ import (
 
 // Extent describes the start and end times for a given range of data
 type Extent struct {
-	Start    time.Time `json:"start"`
-	End      time.Time `json:"end"`
-	LastUsed time.Time `json:"-"`
+	Start    time.Time `msg:"start" json:"start"`
+	End      time.Time `msg:"end" json:"end"`
+	LastUsed time.Time `msg:"lu" json:"-"`
 }
 
 // Includes returns true if the Extent includes the provided Time

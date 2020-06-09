@@ -20,13 +20,13 @@ package timeseries
 type Result struct {
 	// StatementID represents the ID of the statement for this result. This field may not be
 	// used by all tsdb implementations
-	StatementID int
+	StatementID int `msg:"statement_id"`
 	// Error represents a statement-level error
-	Error error
+	Error string `msg:"error"`
 	// SeriesList is an ordered list of the Series in this result
-	SeriesList []*Series
+	SeriesList []*Series `msg:"series"`
 	// SeriesLookup is map of Series in the result, searchable by SeriesHeader Hash
-	SeriesLookup SeriesLookup
+	SeriesLookup SeriesLookup `msg:"-"`
 }
 
 // Size returns the size of the Result in bytes

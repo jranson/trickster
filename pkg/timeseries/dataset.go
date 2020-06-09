@@ -28,31 +28,31 @@ import (
 // DataSet conforms to the Timeseries interface
 type DataSet struct {
 	// Status is the optional status indicator for the DataSet
-	Status string
+	Status string `msg:"status"`
 	// ExtentList is the list of Extents (time ranges) represented in the Results
-	ExtentList ExtentList
+	ExtentList ExtentList `msg:"extent_list"`
 	// PointsLookup is map allowing lookup of a Point by epoch and series hash
-	PointsLookup PointsLookup
+	PointsLookup PointsLookup `msg:"-"`
 	// Results is the list of type Result. Each Result represents information about a
 	// different statement in the source query for this DataSet
-	Results []*Result
+	Results []*Result `msg:"results"`
 	// UpdateLock is used to synchronize updates to the DataSet
-	UpdateLock sync.Mutex
+	UpdateLock sync.Mutex `msg:"-"`
 	// Error is a container for any DataSet-level Errors
-	Error error
+	Error string `msg:"error"`
 	// TimeRangeQuery is the trq associated with the Timeseries
-	TimeRangeQuery *TimeRangeQuery
+	TimeRangeQuery *TimeRangeQuery `msg:"trq"`
 	// Sorter is the DataSet's Sort function, which defaults to DefaultSort
-	Sorter func()
+	Sorter func() `msg:"-"`
 	// Merger is the DataSet's Merge function, which defaults to DefaultMerge
-	Merger func(sortSeries bool, ts ...Timeseries)
+	Merger func(sortSeries bool, ts ...Timeseries) `msg:"-"`
 	// SizeCropper is the DataSet's CropToSize function, whcih defauls to DefautlSizeCropper
-	SizeCropper func(int, time.Time, Extent)
+	SizeCropper func(int, time.Time, Extent) `msg:"-"`
 	// RangeCropper is the DataSet's CropToRange function, whcih defauls to DefautlRangeCropper
-	RangeCropper func(Extent)
+	RangeCropper func(Extent) `msg:"-"`
 	// OutputFormat is bit representing the desired output format of the DataSet; it's actual
 	// implementation of values is fully federated to the underlying Time Series origin package
-	OutputFormat byte
+	OutputFormat byte `msg:"output_format"`
 }
 
 // Marshaler is a function that serializes the provided DataSet into a byte slice
@@ -161,10 +161,9 @@ func (ds *DataSet) DefaultMerger(sortSeries bool, collection ...Timeseries) {
 					}
 
 					var m map[Hash]*Point
-					var ok1 bool
 					for _, p := range s.Points {
 						es.Points = append(es.Points, p)
-						if m, ok1 = ds.PointsLookup[p.Epoch]; !ok1 {
+						if m, ok = ds.PointsLookup[p.Epoch]; !ok {
 							ds.PointsLookup[p.Epoch] = map[Hash]*Point{es.Header.Hash: p}
 							continue
 						}
@@ -388,10 +387,8 @@ func (ds *DataSet) Size() int64 {
 	c := int64(len(ds.Status) +
 		49 + // StepDuration=8 Mutex=8 OutputFormat=1 4xFuncs=32
 		(len(ds.ExtentList) * 72) +
-		(len(ds.PointsLookup) * 16))
-	if ds.Error != nil {
-		c += int64(len(ds.Error.Error()))
-	}
+		(len(ds.PointsLookup) * 16) +
+		len(ds.Error))
 	for _, r := range ds.Results {
 		if r == nil {
 			continue

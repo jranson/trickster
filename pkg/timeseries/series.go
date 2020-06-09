@@ -34,22 +34,22 @@ type Series struct {
 // shape, size, and attributes
 type SeriesHeader struct {
 	// Name is the name of the Series
-	Name string
+	Name string `msg:"name"`
 	// Tags is the map of tags associated with the Series
-	Tags Tags
-	// FieldsLookup is map to lookup the definition of a named field
-	FieldsLookup map[string]*FieldDefinition
+	Tags Tags `msg:"tags"`
+	// // FieldsLookup is map to lookup the definition of a named field
+	// FieldsLookup map[string]*FieldDefinition `msg:"-"`
 	// FieldsList is the ordered list of fields in the Series
-	FieldsList []*FieldDefinition
+	FieldsList []*FieldDefinition `msg:"fields"`
 	// TimestampIndex is the index of the TimeStamp field in the output when
 	// it's time to serialize the DataSet for the wire
-	TimestampIndex int
+	TimestampIndex int `msg:"ti"`
 	// QueryStatement is the original query to which this DataSet is associated
-	QueryStatement string
+	QueryStatement string `msg:"query"`
 	// Hash is the FNV64a Hash for the SeriesHeader
-	Hash Hash
+	Hash Hash `msg:"hash"`
 	// Size is the memory utilization of the Header in bytes
-	Size int
+	Size int `msg:"size"`
 }
 
 // Hash is a numeric value representing a calculated hash
@@ -83,10 +83,10 @@ func (sh *SeriesHeader) CalculateHash() {
 // Clone returns a perfect, new copy of the SeriesHeader
 func (sh *SeriesHeader) Clone() *SeriesHeader {
 	clone := &SeriesHeader{
-		Name:           sh.Name,
-		Tags:           sh.Tags.Clone(),
-		FieldsList:     make([]*FieldDefinition, len(sh.FieldsList)),
-		FieldsLookup:   make(map[string]*FieldDefinition),
+		Name:       sh.Name,
+		Tags:       sh.Tags.Clone(),
+		FieldsList: make([]*FieldDefinition, len(sh.FieldsList)),
+		//FieldsLookup:   make(map[string]*FieldDefinition),
 		TimestampIndex: sh.TimestampIndex,
 		QueryStatement: sh.QueryStatement,
 		Hash:           sh.Hash,
@@ -94,7 +94,7 @@ func (sh *SeriesHeader) Clone() *SeriesHeader {
 	}
 	for i, fd := range sh.FieldsList {
 		clone.FieldsList[i] = fd.Clone()
-		clone.FieldsLookup[fd.Name] = clone.FieldsList[i]
+		//clone.FieldsLookup[fd.Name] = clone.FieldsList[i]
 	}
 	return clone
 }

@@ -29,19 +29,19 @@ import (
 // TimeRangeQuery represents a timeseries database query parsed from an inbound HTTP request
 type TimeRangeQuery struct {
 	// Statement is the timeseries database query (with tokenized timeranges where present) requested by the user
-	Statement string
+	Statement string `msg:"statement"`
 	// Extent provides the start and end times for the request from a timeseries database
-	Extent Extent
+	Extent Extent `msg:"exent"`
 	// Step indicates the amount of time in seconds between each datapoint in a TimeRangeQuery's resulting timeseries
-	Step time.Duration
+	Step time.Duration `msg:"step"`
 	// TimestampFieldName indicates the database field name for the timestamp field
-	TimestampFieldName string
+	TimestampFieldName string `msg:"-"`
 	// TemplateURL is used by some Origin Types for templatization of url parameters containing timestamps
-	TemplateURL *url.URL
+	TemplateURL *url.URL `msg:"-"`
 	// FastForwardDisable indicates whether the Time Range Query result should include fast forward data
-	FastForwardDisable bool
+	FastForwardDisable bool `msg:"-"`
 	// IsOffset is true if the query uses a relative offset modifier
-	IsOffset bool
+	IsOffset bool `msg:"-"`
 }
 
 // Clone returns an exact copy of a TimeRangeQuery

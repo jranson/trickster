@@ -32,8 +32,8 @@ type FieldDataType byte
 
 // FieldDefinition describes a field by name and type
 type FieldDefinition struct {
-	Name     string
-	DataType FieldDataType
+	Name     string        `msg:"name"`
+	DataType FieldDataType `msg:"type"`
 }
 
 // Clone returns a perfect, new copy of the FieldDefinition

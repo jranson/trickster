@@ -40,7 +40,7 @@ func testSeriesHeader() *SeriesHeader {
 		TimestampIndex: 37,
 		Size:           56,
 	}
-	sh.FieldsLookup = map[string]*FieldDefinition{"Field1": sh.FieldsList[0]}
+	//sh.FieldsLookup = map[string]*FieldDefinition{"Field1": sh.FieldsList[0]}
 	sh.CalculateHash()
 	return sh
 }
@@ -58,8 +58,8 @@ func TestSeriesHeaderClone(t *testing.T) {
 	sh := testSeriesHeader()
 	sh2 := sh.Clone()
 	if sh2.Size != sh.Size ||
-		len(sh2.FieldsList) != 1 || len(sh2.FieldsLookup) != 1 ||
-		sh2.FieldsList[0] != sh2.FieldsLookup["Field1"] {
+		len(sh2.FieldsList) != 1 || //len(sh2.FieldsLookup) != 1 ||
+		sh2.FieldsList[0].Name != "Field1" {
 		t.Error("series header clone mismatch")
 	}
 

@@ -25,10 +25,10 @@ type Epochs []Epoch
 
 // Point represents a timeseries data point
 type Point struct {
-	Epoch  Epoch
-	Size   int
-	Header *SeriesHeader
-	Values []interface{}
+	Epoch  Epoch         `msg:"epoch"`
+	Size   int           `msg:"-"`
+	Header *SeriesHeader `msg:"-"`
+	Values []interface{} `msg:"values"`
 }
 
 // Points is a slice of type *Point
