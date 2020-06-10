@@ -48,5 +48,6 @@ func (c *Client) SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery, exte
 	if q != "" {
 		v.Set(upQuery, interpolateTimeQuery(q, extent))
 	}
+	v.Set(upEpoch, "ns") // request nanosecond epoch timestamp format from server
 	params.SetRequestValues(r, v)
 }

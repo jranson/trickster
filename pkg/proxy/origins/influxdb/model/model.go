@@ -272,7 +272,7 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 					return nil, timeseries.ErrInvalidBody
 				}
 
-				pt, cols, err := pointFromValues(v, sh.TimestampIndex, trq.TimeFormat)
+				pt, cols, err := pointFromValues(v, sh.TimestampIndex)
 				if err != nil {
 					return nil, err
 				}
@@ -295,7 +295,7 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 	return ds, nil
 }
 
-func pointFromValues(v []interface{}, tsIndex int, dateFormat byte) (dataset.Point,
+func pointFromValues(v []interface{}, tsIndex int) (dataset.Point,
 	[]dataset.FieldDataType, error) {
 	p := dataset.Point{}
 	p.Values = append(v[:tsIndex], v[tsIndex+1:]...)
