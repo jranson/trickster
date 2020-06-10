@@ -46,9 +46,12 @@ type TimeRangeQuery struct {
 	IsOffset bool `msg:"-"`
 	// StepNS is the nanosecond representation for Step
 	StepNS int64 `msg:"step"`
-	// CustomData is a field usable by time series implementations to pass data between the parsed time range query
-	// and the data unmarshaler/marshaler to give indications about the format or nature of the dataset
-	CustomData byte `msg:"custom_data"`
+	// TimeFormat is a field usable by time series implementations to pass data between the parsed time range query
+	// and the data unmarshaler/marshaler to give indications about the format of Timestamps in the seralized dataset
+	TimeFormat byte `msg:"time_fmt"`
+	// OutputFormat is a field usable by time series implementations to pass data between the parsed time range query
+	// and the data unmarshaler/marshaler to give indications about the content type of the seralized output
+	OutputFormat byte `msg:"output_fmt"`
 }
 
 // Clone returns an exact copy of a TimeRangeQuery
@@ -61,7 +64,8 @@ func (trq *TimeRangeQuery) Clone() *TimeRangeQuery {
 		IsOffset:           trq.IsOffset,
 		TimestampFieldName: trq.TimestampFieldName,
 		FastForwardDisable: trq.FastForwardDisable,
-		CustomData:         trq.CustomData,
+		TimeFormat:         trq.TimeFormat,
+		OutputFormat:       trq.OutputFormat,
 	}
 
 	if trq.TemplateURL != nil {
@@ -83,8 +87,9 @@ func (trq *TimeRangeQuery) NormalizeExtent() {
 }
 
 func (trq *TimeRangeQuery) String() string {
-	return fmt.Sprintf(`{ "statement": "%s", "step": "%s", "extent": "%s", "custom1": %d }`,
-		strings.Replace(trq.Statement, `"`, `\"`, -1), trq.Step.String(), trq.Extent.String(), trq.CustomData)
+	return fmt.Sprintf(`{ "statement": "%s", "step": "%s", "extent": "%s", "timeFormat": %d, "outputFormat": %d }`,
+		strings.Replace(trq.Statement, `"`, `\"`, -1), trq.Step.String(),
+		trq.Extent.String(), trq.TimeFormat, trq.OutputFormat)
 }
 
 // GetBackfillTolerance will return the backfill tolerance for the query based on the provided

@@ -54,9 +54,6 @@ type DataSet struct {
 	SizeCropper func(int, time.Time, timeseries.Extent) `msg:"-"`
 	// RangeCropper is the DataSet's CropToRange function, whcih defauls to DefautlRangeCropper
 	RangeCropper func(timeseries.Extent) `msg:"-"`
-	// OutputFormat is bit representing the desired output format of the DataSet; it's actual
-	// implementation of values is fully federated to the underlying Time Series origin package
-	OutputFormat byte `msg:"output_format"`
 }
 
 // Marshaler is a function that serializes the provided DataSet into a byte slice
@@ -72,7 +69,6 @@ func (ds *DataSet) Clone() timeseries.Timeseries {
 		Merger:       ds.Merger,
 		SizeCropper:  ds.SizeCropper,
 		RangeCropper: ds.RangeCropper,
-		OutputFormat: ds.OutputFormat,
 		ExtentList:   make(timeseries.ExtentList, len(ds.ExtentList)),
 		Results:      make([]Result, len(ds.Results)),
 	}
