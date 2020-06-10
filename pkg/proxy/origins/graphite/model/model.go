@@ -120,14 +120,15 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 	if len(data) == 0 {
 		return nil, timeseries.ErrInvalidBody
 	}
+	if trq == nil {
+		return nil, timeseries.ErrNoTimerangeQuery
+	}
 	var start, end, step int64
 	var err error
 	ds := &dataset.DataSet{
 		Results:        []dataset.Result{{}},
 		TimeRangeQuery: trq,
-	}
-	if trq != nil {
-		ds.ExtentList = timeseries.ExtentList{trq.Extent}
+		ExtentList:     timeseries.ExtentList{trq.Extent},
 	}
 	lines := strings.Split(string(data), "\n")
 	sl := make([]*dataset.Series, len(lines))
@@ -186,8 +187,9 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 				DataType: dataset.Float64,
 			}
 			sh := dataset.SeriesHeader{
-				Name:       headerParts[0],
-				FieldsList: []dataset.FieldDefinition{fd},
+				Name:           headerParts[0],
+				FieldsList:     []dataset.FieldDefinition{fd},
+				QueryStatement: trq.Statement,
 			}
 			width := end - start
 			if width < 0 {

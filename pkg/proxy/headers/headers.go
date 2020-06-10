@@ -30,6 +30,8 @@ import (
 const (
 	// Common HTTP Header Values
 
+	// ValueApplicationCSV represents the HTTP Header Value of "application/csv"
+	ValueApplicationCSV = "application/csv"
 	// ValueApplicationJSON represents the HTTP Header Value of "application/json"
 	ValueApplicationJSON = "application/json"
 	// ValueMaxAge represents the HTTP Header Value of "max-age"

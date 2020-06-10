@@ -52,6 +52,9 @@ type WFResult struct {
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
 func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
+	if trq == nil {
+		return nil, timeseries.ErrNoTimerangeQuery
+	}
 	wfd := &WFDocument{}
 	err := json.Unmarshal(data, &wfd)
 	if err != nil {
@@ -61,9 +64,7 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 		Status:         wfd.Status,
 		Results:        []dataset.Result{{}},
 		TimeRangeQuery: trq,
-	}
-	if trq != nil {
-		ds.ExtentList = timeseries.ExtentList{trq.Extent}
+		ExtentList:     timeseries.ExtentList{trq.Extent},
 	}
 	ds.Results[0].SeriesList = make([]*dataset.Series, len(wfd.Data.Results))
 
@@ -95,7 +96,6 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 				}(v, j)
 			}
 			wg.Wait()
-			// hello extentlist??? TODO
 		} else if wfd.Data.ResultType == "vector" && len(pr.Value) == 2 {
 			pts = make(dataset.Points, 1)
 			pt, _ := pointFromValues(pr.Value)

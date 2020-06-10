@@ -23,6 +23,7 @@ import (
 
 	"github.com/tricksterproxy/trickster/pkg/proxy/engines"
 	"github.com/tricksterproxy/trickster/pkg/proxy/errors"
+	"github.com/tricksterproxy/trickster/pkg/proxy/headers"
 	"github.com/tricksterproxy/trickster/pkg/proxy/params"
 	"github.com/tricksterproxy/trickster/pkg/proxy/urls"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
@@ -67,6 +68,13 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 
 	if b, ok := epochToFlag[v.Get(upEpoch)]; ok {
 		trq.TimeFormat = b
+	}
+
+	if v.Get(upPretty) == "true" {
+		trq.OutputFormat = 1
+	} else if r != nil && r.Header != nil &&
+		r.Header.Get(headers.NameAcceptEncoding) == headers.ValueApplicationCSV {
+		trq.OutputFormat = 2
 	}
 
 	// if the Step wasn't found in the query (e.g., "group by time(1m)"), just proxy it instead
