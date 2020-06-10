@@ -50,43 +50,43 @@ const testResultJSON1 = `[{
 `
 
 func TestUnmarshalTimeseries(t *testing.T) {
-	_, err := UnmarshalTimeseries([]byte(testResult1))
+	_, err := UnmarshalTimeseries([]byte(testResult1), nil)
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = UnmarshalTimeseries(nil)
+	_, err = UnmarshalTimeseries(nil, nil)
 	if err != timeseries.ErrInvalidBody {
 		t.Error("expected error for invalid body")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60|1,2,3,4|"))
+	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60|1,2,3,4|"), nil)
 	if err != timeseries.ErrInvalidBody {
 		t.Error("expected error for invalid body")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60,|1,2,3,4"))
+	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60,|1,2,3,4"), nil)
 	if err != timeseries.ErrTableHeader {
 		t.Error("expected error for invalid table header")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,a,180,60|1,2,3,4"))
+	_, err = UnmarshalTimeseries([]byte("expression1,a,180,60|1,2,3,4"), nil)
 	if err != timeseries.ErrUnmarshalEpoch {
 		t.Error("expected error for invalid epoch")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,0,a,60|1,2,3,4"))
+	_, err = UnmarshalTimeseries([]byte("expression1,0,a,60|1,2,3,4"), nil)
 	if err != timeseries.ErrUnmarshalEpoch {
 		t.Error("expected error for invalid epoch")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,0,180,a|1,2,3,4"))
+	_, err = UnmarshalTimeseries([]byte("expression1,0,180,a|1,2,3,4"), nil)
 	if err != timeseries.ErrUnmarshalEpoch {
 		t.Error("expected error for invalid epoch")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,180,0,60|1,2,3,4"))
+	_, err = UnmarshalTimeseries([]byte("expression1,180,0,60|1,2,3,4"), nil)
 	if err != timeseries.ErrInvalidExtent {
 		t.Error("expected error for invalid extent")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60|1,2,3,4,5"))
+	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60|1,2,3,4,5"), nil)
 	if err != timeseries.ErrInvalidExtent {
 		t.Error("expected error for invalid extent")
 	}
-	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60|1,2,3,trickster"))
+	_, err = UnmarshalTimeseries([]byte("expression1,0,180,60|1,2,3,trickster"), nil)
 	if err.(*strconv.NumError).Err != strconv.ErrSyntax {
 		t.Error("expected error for invalid syntax")
 	}
@@ -99,7 +99,8 @@ func TestMarshalTimeseries(t *testing.T) {
 		t.Error("expected error for unknown format")
 	}
 
-	ts, err := UnmarshalTimeseries([]byte(testResult1))
+	trq := &timeseries.TimeRangeQuery{}
+	ts, err := UnmarshalTimeseries([]byte(testResult1), trq)
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,7 +111,7 @@ func TestMarshalTimeseries(t *testing.T) {
 	}
 
 	cf := ts.(*dataset.DataSet)
-	cf.OutputFormat = 2
+	cf.TimeRangeQuery.OutputFormat = 2
 
 	_, err = MarshalTimeseries(ts)
 	if err != timeseries.ErrUnknownFormat {
@@ -120,7 +121,7 @@ func TestMarshalTimeseries(t *testing.T) {
 }
 
 func TestMarshalTimeseriesRaw(t *testing.T) {
-	ts, err := UnmarshalTimeseries([]byte(testResult1))
+	ts, err := UnmarshalTimeseries([]byte(testResult1), nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -163,7 +164,7 @@ func TestMarshalTimeseriesJSON(t *testing.T) {
 	}
 
 	var ts timeseries.Timeseries
-	ts, err = UnmarshalTimeseries([]byte(testResult1))
+	ts, err = UnmarshalTimeseries([]byte(testResult1), nil)
 	if err != nil {
 		t.Error(err)
 	}

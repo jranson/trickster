@@ -49,7 +49,7 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 		return timeseries.ErrUnknownFormat
 	}
 	if ds, ok := ts.(*dataset.DataSet); ok {
-		if marshaler, ok2 := marshalers[ds.OutputFormat]; ok2 {
+		if marshaler, ok2 := marshalers[ds.TimeRangeQuery.OutputFormat]; ok2 {
 			return marshaler(ds, w)
 		}
 	}
@@ -116,14 +116,15 @@ func marshalTimeseriesJSON(ds *dataset.DataSet, w io.Writer) error {
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
-func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
+func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
 	if len(data) == 0 {
 		return nil, timeseries.ErrInvalidBody
 	}
 	var start, end, step int64
 	var err error
 	ds := &dataset.DataSet{
-		Results: []dataset.Result{{}},
+		Results:        []dataset.Result{{}},
+		TimeRangeQuery: trq,
 	}
 	lines := strings.Split(string(data), "\n")
 	sl := make([]*dataset.Series, len(lines))
@@ -227,8 +228,9 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
 		return nil, err
 	}
 	ds.Results[0].SeriesList = sl
-
-	// TODO: Populate more Result data and Series data, e.g., ExtentList
+	if trq != nil {
+		ds.ExtentList = timeseries.ExtentList{trq.Extent}
+	}
 
 	return ds, nil
 }

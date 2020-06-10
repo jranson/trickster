@@ -66,7 +66,7 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 	}
 
 	if b, ok := epochToFlag[v.Get(upEpoch)]; ok {
-		trq.CustomData = b
+		trq.TimeFormat = b
 	}
 
 	// if the Step wasn't found in the query (e.g., "group by time(1m)"), just proxy it instead

@@ -82,7 +82,7 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 		return timeseries.ErrUnknownFormat
 	}
 	if ds, ok := ts.(*dataset.DataSet); ok {
-		if marshaler, ok2 := marshalers[ds.OutputFormat]; ok2 {
+		if marshaler, ok2 := marshalers[ds.TimeRangeQuery.OutputFormat]; ok2 {
 			return marshaler(ds, w)
 		}
 	}
@@ -95,11 +95,11 @@ func marshalTimeseriesJSON(ds *dataset.DataSet, w io.Writer) error {
 	}
 	var multiplier int64
 	var dateWriter func(io.Writer, dataset.Epoch, int64)
-	switch ds.TimeRangeQuery.CustomData {
+	switch ds.TimeRangeQuery.TimeFormat {
 	case 0:
 		dateWriter = writeRFC3339Time
 	default:
-		if m, ok := epochMultipliers[ds.TimeRangeQuery.CustomData]; ok {
+		if m, ok := epochMultipliers[ds.TimeRangeQuery.TimeFormat]; ok {
 			multiplier = m
 		} else {
 			multiplier = 1
@@ -270,7 +270,7 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 					return nil, timeseries.ErrInvalidBody
 				}
 
-				pt, cols, err := pointFromValues(v, sh.TimestampIndex, trq.CustomData)
+				pt, cols, err := pointFromValues(v, sh.TimestampIndex, trq.TimeFormat)
 				if err != nil {
 					return nil, err
 				}
