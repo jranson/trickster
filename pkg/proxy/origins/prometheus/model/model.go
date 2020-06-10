@@ -70,7 +70,8 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 
 	for i, pr := range wfd.Data.Results {
 		sh := dataset.SeriesHeader{
-			Tags: pr.Metric,
+			Tags:           pr.Metric,
+			QueryStatement: trq.Statement,
 		}
 		if n, ok := pr.Metric["__name__"]; ok {
 			sh.Name = n
