@@ -116,7 +116,7 @@ func TestDF4SeriesEnvelopeSetExtents(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeSeriesCount(t *testing.T) {
-	ts, err := UnmarshalTimeseries([]byte(testDF4Response))
+	ts, err := UnmarshalTimeseries([]byte(testDF4Response), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -129,7 +129,7 @@ func TestDF4SeriesEnvelopeSeriesCount(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeValueCount(t *testing.T) {
-	ts, err := UnmarshalTimeseries([]byte(testDF4Response))
+	ts, err := UnmarshalTimeseries([]byte(testDF4Response), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -142,7 +142,7 @@ func TestDF4SeriesEnvelopeValueCount(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeTimestampCount(t *testing.T) {
-	ts, err := UnmarshalTimeseries([]byte(testDF4Response2))
+	ts, err := UnmarshalTimeseries([]byte(testDF4Response2), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -155,14 +155,14 @@ func TestDF4SeriesEnvelopeTimestampCount(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeMerge(t *testing.T) {
-	ts1, err := UnmarshalTimeseries([]byte(testDF4Response))
+	ts1, err := UnmarshalTimeseries([]byte(testDF4Response), nil)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	se1 := ts1.(*DF4SeriesEnvelope)
-	ts2, err := UnmarshalTimeseries([]byte(testDF4Response2))
+	ts2, err := UnmarshalTimeseries([]byte(testDF4Response2), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -190,7 +190,7 @@ func TestDF4SeriesEnvelopeMerge(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeClone(t *testing.T) {
-	ts1, err := UnmarshalTimeseries([]byte(testDF4Response))
+	ts1, err := UnmarshalTimeseries([]byte(testDF4Response), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -217,7 +217,7 @@ func TestDF4SeriesEnvelopeClone(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeCropToRange(t *testing.T) {
-	ts1, err := UnmarshalTimeseries([]byte(testDF4Response))
+	ts1, err := UnmarshalTimeseries([]byte(testDF4Response), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -270,7 +270,7 @@ func TestDF4SeriesEnvelopeCropToRange(t *testing.T) {
 }
 
 func TestDF4SeriesEnvelopeCropToSize(t *testing.T) {
-	ts1, err := UnmarshalTimeseries([]byte(testDF4Response))
+	ts1, err := UnmarshalTimeseries([]byte(testDF4Response), nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -350,7 +350,7 @@ func TestMarshalDF4Timeseries(t *testing.T) {
 
 func TestUnmarshalDF4Timeseries(t *testing.T) {
 	bytes := []byte(testDF4Response2)
-	ts, err := UnmarshalTimeseries(bytes)
+	ts, err := UnmarshalTimeseries(bytes, nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -380,7 +380,7 @@ func TestUnmarshalDF4Timeseries(t *testing.T) {
 
 func TestSize(t *testing.T) {
 
-	s, _ := UnmarshalTimeseries([]byte(testDF4Response))
+	s, _ := UnmarshalTimeseries([]byte(testDF4Response), nil)
 
 	if s.Size() != 136 {
 		t.Errorf("expected %d got %d", 136, s.Size())

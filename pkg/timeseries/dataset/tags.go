@@ -44,6 +44,21 @@ func (t Tags) String() string {
 	return strings.Join(pairs, ";")
 }
 
+// KVP returns a string representation of the Tags as "key"="value","key2"="value2"
+func (t Tags) KVP() string {
+	if len(t) == 0 {
+		return ""
+	}
+	pairs := make(sort.StringSlice, len(t))
+	var i int
+	for k, v := range t {
+		pairs[i] = fmt.Sprintf(`"%s"="%s"`, k, v)
+		i++
+	}
+	sort.Sort(pairs)
+	return strings.Join(pairs, ",")
+}
+
 // Keys returns a string-sorted list of the Tags's keys
 func (t Tags) Keys() []string {
 	if len(t) == 0 {

@@ -32,3 +32,9 @@ var ErrInvalidBody = errors.New("could not deserialize result body")
 
 // ErrUnknownFormat is an error for when a provided TimeSeries cannot be cast to a DataSet
 var ErrUnknownFormat = errors.New("unknown timeseries format")
+
+// ErrNoTimerangeQuery is an error for when a method is provided a nil *TimeRangeQuery
+var ErrNoTimerangeQuery = errors.New("no timerange query")
+
+// ErrInvalidTimeFormat is an error for when the provided time is not in the expected format
+var ErrInvalidTimeFormat = errors.New("invalid time format")

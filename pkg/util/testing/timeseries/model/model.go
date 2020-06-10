@@ -61,15 +61,16 @@ func Modeler() *timeseries.Modeler {
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
-func UnmarshalTimeseries(data []byte) (timeseries.Timeseries, error) {
+func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
 	wfd := &WFDocument{}
 	err := json.Unmarshal(data, &wfd)
 	if err != nil {
 		return nil, err
 	}
 	ds := &dataset.DataSet{
-		Status:  wfd.Status,
-		Results: []dataset.Result{{}},
+		Status:         wfd.Status,
+		Results:        []dataset.Result{{}},
+		TimeRangeQuery: trq,
 	}
 	ds.Results[0].SeriesList = make([]*dataset.Series, len(wfd.Data.Results))
 

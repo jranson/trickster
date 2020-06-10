@@ -30,8 +30,10 @@ const (
 
 // Common URL Parameter Names
 const (
-	upQuery = "q"
-	upDB    = "db"
+	upQuery  = "q"
+	upDB     = "db"
+	upEpoch  = "epoch"
+	upPretty = "pretty"
 )
 
 // SetExtent will change the upstream request query to use the provided Extent

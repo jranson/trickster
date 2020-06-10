@@ -46,15 +46,27 @@ func (c *Client) QueryHandler(w http.ResponseWriter, r *http.Request) {
 	engines.DeltaProxyCacheRequest(w, r, c.modeler)
 }
 
+var epochToFlag = map[string]byte{
+	"ns": 1,
+	"u":  2, "µ": 2,
+	"ms": 3,
+	"s":  4,
+	"m":  5,
+	"h":  6,
+}
+
 // ParseTimeRangeQuery parses the key parts of a TimeRangeQuery from the inbound HTTP Request
 func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuery, error) {
 
 	trq := &timeseries.TimeRangeQuery{Extent: timeseries.Extent{}}
 
 	v, _, _ := params.GetRequestValues(r)
-	trq.Statement = v.Get(upQuery)
-	if trq.Statement == "" {
+	if trq.Statement = v.Get(upQuery); trq.Statement == "" {
 		return nil, errors.MissingURLParam(upQuery)
+	}
+
+	if b, ok := epochToFlag[v.Get(upEpoch)]; ok {
+		trq.CustomData = b
 	}
 
 	// if the Step wasn't found in the query (e.g., "group by time(1m)"), just proxy it instead

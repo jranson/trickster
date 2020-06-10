@@ -160,7 +160,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 				if cc.CacheType == "memory" {
 					cts = doc.timeseries
 				} else {
-					cts, err = modeler.CacheUnmarshaler(doc.Body)
+					cts, err = modeler.CacheUnmarshaler(doc.Body, trq)
 				}
 			}
 			if err != nil {
@@ -316,7 +316,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 
 			body, resp, _ := rq.Fetch()
 			if resp.StatusCode == http.StatusOK && len(body) > 0 {
-				nts, err := modeler.WireUnmarshaler(body)
+				nts, err := modeler.WireUnmarshaler(body, trq)
 				if err != nil {
 					pr.Logger.Error("proxy object unmarshaling failed",
 						tl.Pairs{"body": string(body)})
@@ -351,7 +351,7 @@ func DeltaProxyCacheRequest(w http.ResponseWriter, r *http.Request, modeler *tim
 			}
 			body, resp, isHit := FetchViaObjectProxyCache(ffReq)
 			if resp != nil && resp.StatusCode == http.StatusOK && len(body) > 0 {
-				ffts, err = modeler.WireUnmarshaler(body)
+				ffts, err = modeler.WireUnmarshaler(body, trq)
 				if err != nil {
 					ffStatus = "err"
 					pr.Logger.Error("proxy object unmarshaling failed",
@@ -502,7 +502,7 @@ func fetchTimeseries(pr *proxyRequest, trq *timeseries.TimeRangeQuery,
 		return nil, d, time.Duration(0), tpe.ErrUnexpectedUpstreamResponse
 	}
 
-	ts, err := modeler.WireUnmarshaler(body)
+	ts, err := modeler.WireUnmarshaler(body, trq)
 	if err != nil {
 		pr.Logger.Error("proxy object unmarshaling failed", tl.Pairs{"body": string(body)})
 		return nil, d, time.Duration(0), err

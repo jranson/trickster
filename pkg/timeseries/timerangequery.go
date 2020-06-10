@@ -46,6 +46,9 @@ type TimeRangeQuery struct {
 	IsOffset bool `msg:"-"`
 	// StepNS is the nanosecond representation for Step
 	StepNS int64 `msg:"step"`
+	// CustomData is a field usable by time series implementations to pass data between the parsed time range query
+	// and the data unmarshaler/marshaler to give indications about the format or nature of the dataset
+	CustomData byte `msg:"custom_data"`
 }
 
 // Clone returns an exact copy of a TimeRangeQuery
@@ -58,6 +61,7 @@ func (trq *TimeRangeQuery) Clone() *TimeRangeQuery {
 		IsOffset:           trq.IsOffset,
 		TimestampFieldName: trq.TimestampFieldName,
 		FastForwardDisable: trq.FastForwardDisable,
+		CustomData:         trq.CustomData,
 	}
 
 	if trq.TemplateURL != nil {
@@ -79,8 +83,8 @@ func (trq *TimeRangeQuery) NormalizeExtent() {
 }
 
 func (trq *TimeRangeQuery) String() string {
-	return fmt.Sprintf(`{ "statement": "%s", "step": "%s", "extent": "%s" }`,
-		strings.Replace(trq.Statement, `"`, `\"`, -1), trq.Step.String(), trq.Extent.String())
+	return fmt.Sprintf(`{ "statement": "%s", "step": "%s", "extent": "%s", "custom1": %d }`,
+		strings.Replace(trq.Statement, `"`, `\"`, -1), trq.Step.String(), trq.Extent.String(), trq.CustomData)
 }
 
 // GetBackfillTolerance will return the backfill tolerance for the query based on the provided
@@ -99,4 +103,10 @@ func (trq *TimeRangeQuery) GetBackfillTolerance(def time.Duration) time.Duration
 		}
 	}
 	return def
+}
+
+// Size returns the memory usage in bytes of the TimeRangeQuery
+func (trq *TimeRangeQuery) Size() int {
+	return len(trq.Statement) + 24 + 8 + len(trq.TimestampFieldName) + // Extent=24 + Step=8
+		urls.Size(trq.TemplateURL) + 11 // FFwDisable=1 IsOffset=1 StepNS=8 CustomData=1
 }

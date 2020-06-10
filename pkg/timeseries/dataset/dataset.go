@@ -397,13 +397,16 @@ func (ds *DataSet) Sort() {
 }
 
 // UnmarshalDataSet unmarshals the dataset from a msgpack-formatted byte slice
-func UnmarshalDataSet(b []byte) (timeseries.Timeseries, error) {
+func UnmarshalDataSet(b []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
 	ds := &DataSet{}
 	_, err := ds.UnmarshalMsg(b)
-	if err == nil && ds.TimeRangeQuery != nil {
-		ds.TimeRangeQuery.Step = time.Duration(ds.TimeRangeQuery.StepNS)
+	if err == nil {
+		if ds.TimeRangeQuery != nil {
+			ds.TimeRangeQuery.Step = time.Duration(ds.TimeRangeQuery.StepNS)
+		} else {
+			ds.TimeRangeQuery = trq
+		}
 	}
-
 	return ds, err
 }
 

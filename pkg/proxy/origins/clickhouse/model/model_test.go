@@ -97,7 +97,7 @@ var testRE1 = &ResultsEnvelope{
 
 func TestUnmarshalTimeseries(t *testing.T) {
 
-	ts, err := UnmarshalTimeseries(testJSON1)
+	ts, err := UnmarshalTimeseries(testJSON1, nil)
 	if err != nil {
 		t.Error(err)
 		return
@@ -115,13 +115,13 @@ func TestUnmarshalTimeseries(t *testing.T) {
 		return
 	}
 
-	_, err = UnmarshalTimeseries(nil)
+	_, err = UnmarshalTimeseries(nil, nil)
 	if err == nil {
 		t.Errorf("expected error: %s", `unexpected end of JSON input`)
 		return
 	}
 
-	_, err = UnmarshalTimeseries(testJSON2)
+	_, err = UnmarshalTimeseries(testJSON2, nil)
 	if err == nil {
 		t.Errorf("expected error: %s", `Must have at least two fields; only have 1`)
 		return

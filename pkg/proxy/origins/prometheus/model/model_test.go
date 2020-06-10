@@ -32,7 +32,7 @@ const testDoc = `{"status":"success","data":{"resultType":"matrix","result":[{` 
 
 func TestUnmarshalTimeseries(t *testing.T) {
 	b := []byte(testDoc)
-	ts, err := UnmarshalTimeseries(b)
+	ts, err := UnmarshalTimeseries(b, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +60,7 @@ func TestUnmarshalInstantaneous(t *testing.T) {
 	bytes := []byte(`{"status":"success","data":{"resultType":"vector","result":[` +
 		`{"metric":{"__name__":"up","instance":"localhost:9090","job":"prometheus"},` +
 		`"value":[1554730772.113,"1"]}]}}`)
-	_, err := UnmarshalTimeseries(bytes)
+	_, err := UnmarshalTimeseries(bytes, nil)
 	if err != nil {
 		t.Error(err)
 		return

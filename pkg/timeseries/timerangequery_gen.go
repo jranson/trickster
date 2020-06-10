@@ -48,8 +48,13 @@ func (z *TimeRangeQuery) DecodeMsg(dc *msgp.Reader) (err error) {
 			if err != nil {
 				return
 			}
-		case "StepNS":
+		case "step":
 			z.StepNS, err = dc.ReadInt64()
+			if err != nil {
+				return
+			}
+		case "custom_data":
+			z.CustomData, err = dc.ReadByte()
 			if err != nil {
 				return
 			}
@@ -65,9 +70,9 @@ func (z *TimeRangeQuery) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 3
+	// map header, size 4
 	// write "statement"
-	err = en.Append(0x83, 0xa9, 0x73, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74)
+	err = en.Append(0x84, 0xa9, 0x73, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74)
 	if err != nil {
 		return
 	}
@@ -84,12 +89,21 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 	if err != nil {
 		return
 	}
-	// write "StepNS"
-	err = en.Append(0xa6, 0x53, 0x74, 0x65, 0x70, 0x4e, 0x53)
+	// write "step"
+	err = en.Append(0xa4, 0x73, 0x74, 0x65, 0x70)
 	if err != nil {
 		return
 	}
 	err = en.WriteInt64(z.StepNS)
+	if err != nil {
+		return
+	}
+	// write "custom_data"
+	err = en.Append(0xab, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x5f, 0x64, 0x61, 0x74, 0x61)
+	if err != nil {
+		return
+	}
+	err = en.WriteByte(z.CustomData)
 	if err != nil {
 		return
 	}
@@ -99,9 +113,9 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *TimeRangeQuery) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 3
+	// map header, size 4
 	// string "statement"
-	o = append(o, 0x83, 0xa9, 0x73, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74)
+	o = append(o, 0x84, 0xa9, 0x73, 0x74, 0x61, 0x74, 0x65, 0x6d, 0x65, 0x6e, 0x74)
 	o = msgp.AppendString(o, z.Statement)
 	// string "exent"
 	o = append(o, 0xa5, 0x65, 0x78, 0x65, 0x6e, 0x74)
@@ -109,9 +123,12 @@ func (z *TimeRangeQuery) MarshalMsg(b []byte) (o []byte, err error) {
 	if err != nil {
 		return
 	}
-	// string "StepNS"
-	o = append(o, 0xa6, 0x53, 0x74, 0x65, 0x70, 0x4e, 0x53)
+	// string "step"
+	o = append(o, 0xa4, 0x73, 0x74, 0x65, 0x70)
 	o = msgp.AppendInt64(o, z.StepNS)
+	// string "custom_data"
+	o = append(o, 0xab, 0x63, 0x75, 0x73, 0x74, 0x6f, 0x6d, 0x5f, 0x64, 0x61, 0x74, 0x61)
+	o = msgp.AppendByte(o, z.CustomData)
 	return
 }
 
@@ -141,8 +158,13 @@ func (z *TimeRangeQuery) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			if err != nil {
 				return
 			}
-		case "StepNS":
+		case "step":
 			z.StepNS, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				return
+			}
+		case "custom_data":
+			z.CustomData, bts, err = msgp.ReadByteBytes(bts)
 			if err != nil {
 				return
 			}
@@ -159,6 +181,6 @@ func (z *TimeRangeQuery) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *TimeRangeQuery) Msgsize() (s int) {
-	s = 1 + 10 + msgp.StringPrefixSize + len(z.Statement) + 6 + z.Extent.Msgsize() + 7 + msgp.Int64Size
+	s = 1 + 10 + msgp.StringPrefixSize + len(z.Statement) + 6 + z.Extent.Msgsize() + 5 + msgp.Int64Size + 12 + msgp.ByteSize
 	return
 }

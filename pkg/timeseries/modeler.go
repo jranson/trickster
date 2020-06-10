@@ -30,7 +30,7 @@ type Modeler struct {
 }
 
 // UnmarshalerFunc describes a function that unmarshals a Timeseries
-type UnmarshalerFunc func([]byte) (Timeseries, error)
+type UnmarshalerFunc func([]byte, *TimeRangeQuery) (Timeseries, error)
 
 // MarshalerFunc describes a function that marshals a Timeseries
 type MarshalerFunc func(Timeseries) ([]byte, error)

@@ -355,11 +355,11 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 }
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries value.
-func UnmarshalTimeseries(data []byte) (timeseries.Timeseries,
+func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries,
 	error) {
 	if strings.Contains(strings.Replace(string(data), " ", "", -1),
 		`"version":"DF4"`) {
-		se := &DF4SeriesEnvelope{}
+		se := &DF4SeriesEnvelope{timeRangeQuery: trq}
 		err := json.Unmarshal(data, &se)
 		return se, err
 	}
@@ -373,7 +373,7 @@ func UnmarshalTimeseries(data []byte) (timeseries.Timeseries,
 // to the Client interface.
 func UnmarshalInstantaneous(
 	data []byte) (timeseries.Timeseries, error) {
-	return UnmarshalTimeseries(data)
+	return UnmarshalTimeseries(data, nil) // TODO fix Instantaneous prototype
 }
 
 // Size returns the approximate memory utilization in bytes of the timeseries
