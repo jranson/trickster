@@ -76,6 +76,7 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 		r.Header.Get(headers.NameAcceptEncoding) == headers.ValueApplicationCSV {
 		trq.OutputFormat = 2
 	}
+	r.Header.Del(headers.NameAcceptEncoding)
 
 	// if the Step wasn't found in the query (e.g., "group by time(1m)"), just proxy it instead
 	step, found := matching.GetNamedMatch("step", reStep, trq.Statement)
