@@ -508,9 +508,6 @@ func fetchTimeseries(pr *proxyRequest, trq *timeseries.TimeRangeQuery,
 		return nil, d, time.Duration(0), err
 	}
 
-	ts.SetExtents([]timeseries.Extent{trq.Extent})
-	ts.SetTimeRangeQuery(trq)
-
 	return ts, d, elapsed, nil
 }
 

@@ -222,7 +222,9 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 	ds := &dataset.DataSet{
 		Error:          wfd.Err,
 		TimeRangeQuery: trq,
-		ExtentList:     timeseries.ExtentList{trq.Extent},
+	}
+	if trq != nil {
+		ds.ExtentList = timeseries.ExtentList{trq.Extent}
 	}
 	if wfd.Results == nil {
 		return nil, timeseries.ErrInvalidBody

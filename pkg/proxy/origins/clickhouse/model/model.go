@@ -52,6 +52,9 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries, w io.Writer) error {
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
 func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
 	re := &ResultsEnvelope{timeRangeQuery: trq}
+	if trq != nil {
+		re.ExtentList = timeseries.ExtentList{trq.Extent}
+	}
 	err := json.Unmarshal(data, re)
 	return re, err
 }

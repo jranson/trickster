@@ -84,6 +84,7 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 
 	qt := url.Values(http.Header(v).Clone())
 	qt.Set(upQuery, trq.Statement)
+
 	// Swap in the Tokenzed Query in the Url Params
 	trq.TemplateURL.RawQuery = qt.Encode()
 

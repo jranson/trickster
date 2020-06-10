@@ -360,11 +360,17 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 	if strings.Contains(strings.Replace(string(data), " ", "", -1),
 		`"version":"DF4"`) {
 		se := &DF4SeriesEnvelope{timeRangeQuery: trq}
+		if trq != nil {
+			se.ExtentList = timeseries.ExtentList{trq.Extent}
+		}
 		err := json.Unmarshal(data, &se)
 		return se, err
 	}
 
-	se := &SeriesEnvelope{}
+	se := &SeriesEnvelope{timeRangeQuery: trq}
+	if trq != nil {
+		se.ExtentList = timeseries.ExtentList{trq.Extent}
+	}
 	err := json.Unmarshal(data, &se)
 	return se, err
 }

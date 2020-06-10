@@ -126,6 +126,9 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 		Results:        []dataset.Result{{}},
 		TimeRangeQuery: trq,
 	}
+	if trq != nil {
+		ds.ExtentList = timeseries.ExtentList{trq.Extent}
+	}
 	lines := strings.Split(string(data), "\n")
 	sl := make([]*dataset.Series, len(lines))
 	//r.SeriesLookup = make(map[timeseries.Hash]*timeseries.Series)
@@ -228,9 +231,6 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 		return nil, err
 	}
 	ds.Results[0].SeriesList = sl
-	if trq != nil {
-		ds.ExtentList = timeseries.ExtentList{trq.Extent}
-	}
 
 	return ds, nil
 }
