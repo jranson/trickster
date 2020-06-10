@@ -32,9 +32,9 @@ import (
 	"github.com/tricksterproxy/trickster/pkg/proxy/origins"
 	oo "github.com/tricksterproxy/trickster/pkg/proxy/origins/options"
 	"github.com/tricksterproxy/trickster/pkg/proxy/params"
-	tt "github.com/tricksterproxy/trickster/pkg/proxy/timeconv"
 	"github.com/tricksterproxy/trickster/pkg/proxy/urls"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
+	tt "github.com/tricksterproxy/trickster/pkg/util/timeconv"
 )
 
 var _ origins.Client = (*Client)(nil)

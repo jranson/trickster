@@ -24,10 +24,10 @@ import (
 	"github.com/tricksterproxy/trickster/pkg/proxy/engines"
 	"github.com/tricksterproxy/trickster/pkg/proxy/errors"
 	"github.com/tricksterproxy/trickster/pkg/proxy/params"
-	"github.com/tricksterproxy/trickster/pkg/proxy/timeconv"
 	"github.com/tricksterproxy/trickster/pkg/proxy/urls"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
 	"github.com/tricksterproxy/trickster/pkg/util/regexp/matching"
+	"github.com/tricksterproxy/trickster/pkg/util/timeconv"
 )
 
 // QueryHandler handles timeseries requests for InfluxDB and processes them through the delta proxy cache

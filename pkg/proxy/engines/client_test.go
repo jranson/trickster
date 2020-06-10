@@ -34,10 +34,10 @@ import (
 	oo "github.com/tricksterproxy/trickster/pkg/proxy/origins/options"
 	"github.com/tricksterproxy/trickster/pkg/proxy/params"
 	po "github.com/tricksterproxy/trickster/pkg/proxy/paths/options"
-	tt "github.com/tricksterproxy/trickster/pkg/proxy/timeconv"
 	"github.com/tricksterproxy/trickster/pkg/timeseries"
 	"github.com/tricksterproxy/trickster/pkg/timeseries/dataset"
 	tst "github.com/tricksterproxy/trickster/pkg/util/testing/timeseries/model"
+	tt "github.com/tricksterproxy/trickster/pkg/util/timeconv"
 )
 
 // Prometheus API
