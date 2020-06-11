@@ -18,6 +18,7 @@ package model
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -117,6 +118,7 @@ func marshalTimeseriesJSON(ds *dataset.DataSet, w io.Writer) error {
 
 // UnmarshalTimeseries converts a JSON blob into a Timeseries
 func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
+	fmt.Println("!!!!!!!!!!!")
 	if len(data) == 0 {
 		return nil, timeseries.ErrInvalidBody
 	}
@@ -128,13 +130,14 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 	ds := &dataset.DataSet{
 		Results:        []dataset.Result{{}},
 		TimeRangeQuery: trq,
-		ExtentList:     timeseries.ExtentList{trq.Extent},
+		ExtentList:     timeseries.ExtentList{},
 	}
 	lines := strings.Split(string(data), "\n")
 	sl := make([]*dataset.Series, len(lines))
 	//r.SeriesLookup = make(map[timeseries.Hash]*timeseries.Series)
 	wg := sync.WaitGroup{}
 	for i, line := range lines {
+		fmt.Println(">>>>", line)
 		if line == "" {
 			continue
 		}
@@ -145,23 +148,28 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 			var e error
 			row := strings.Split(string(l), "|")
 			if len(row) != 2 {
+				fmt.Println("?")
 				err = timeseries.ErrInvalidBody
 				return
 			}
 			headerParts := strings.Split(row[0], ",")
 			if len(headerParts) != 4 {
+				fmt.Println("#")
 				err = timeseries.ErrTableHeader
 				return
 			}
 			if s, e = strconv.ParseInt(headerParts[1], 10, 64); e != nil {
+				fmt.Println("^")
 				err = timeseries.ErrUnmarshalEpoch
 				return
 			}
 			if n, e = strconv.ParseInt(headerParts[2], 10, 64); e != nil {
+				fmt.Println("%")
 				err = timeseries.ErrUnmarshalEpoch
 				return
 			}
 			if p, e = strconv.ParseInt(headerParts[3], 10, 64); e != nil {
+				fmt.Println("@")
 				err = timeseries.ErrUnmarshalEpoch
 				return
 			}
@@ -178,7 +186,9 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 					ds.ExtentList = timeseries.ExtentList{extent}
 					start = s
 					end = n
-					step = p
+					if step == 0 || p < step {
+						step = p
+					}
 				}
 				ds.UpdateLock.Unlock()
 			}
@@ -193,20 +203,30 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 			}
 			width := end - start
 			if width < 0 {
+				fmt.Println("/")
 				err = timeseries.ErrInvalidExtent
 				return
 			}
 			numPoints := int((width / p) + 1)
 			values := strings.Split(row[1], ",")
-			if len(values) != numPoints {
+			fmt.Println(start, end, width, len(values))
+			if len(values) > numPoints || numPoints-len(values) > 1 {
+				fmt.Println("\\", len(values), numPoints)
 				err = timeseries.ErrInvalidExtent
 				return
 			}
-			points := make(dataset.Points, numPoints)
+
+			if len(ds.ExtentList) == 0 {
+				trq.Extent = timeseries.Extent{Start: time.Unix(start, 0), End: time.Unix(end, 0)}
+				ds.ExtentList = timeseries.ExtentList{trq.Extent}
+			}
+
+			points := make(dataset.Points, 0, numPoints)
 			var j int
-			for x := s; x <= n && j < numPoints; x += p {
+			for x := s; x <= n && j < len(values); x += p {
 				var v float64
 				if v, e = strconv.ParseFloat(values[j], 64); e != nil {
+					fmt.Println("}")
 					err = e
 					return
 				}
@@ -216,7 +236,7 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 					Values: []interface{}{v},
 					Size:   20,
 				}
-				points[j] = point
+				points = append(points, point)
 				j++
 			}
 			sh.CalculateSize()
@@ -230,8 +250,10 @@ func UnmarshalTimeseries(data []byte, trq *timeseries.TimeRangeQuery) (timeserie
 	}
 	wg.Wait()
 	if err != nil {
+		fmt.Println("-")
 		return nil, err
 	}
+	ds.TimeRangeQuery.Step = time.Duration(step) * time.Second
 	ds.Results[0].SeriesList = sl
 
 	return ds, nil
