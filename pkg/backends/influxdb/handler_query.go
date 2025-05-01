@@ -17,8 +17,6 @@
 package influxdb
 
 import (
-	"bytes"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,7 +26,6 @@ import (
 	"github.com/trickstercache/trickster/v2/pkg/proxy/engines"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/errors"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/headers"
-	"github.com/trickstercache/trickster/v2/pkg/proxy/methods"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/params"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/urls"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
@@ -42,13 +39,11 @@ func (c *Client) QueryHandler(w http.ResponseWriter, r *http.Request) {
 	qp, qb, fromBody := params.GetRequestValues(r)
 	q := strings.Trim(strings.ToLower(qp.Get(upQuery)), " \t\n")
 	if q == "" {
-
 		if len(qb) == 0 || !fromBody {
 			c.ProxyHandler(w, r)
 			return
 		}
 		q = string(qb)
-
 	}
 
 	// if it's not a select statement, just proxy it instead
@@ -77,26 +72,31 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 	trq := &timeseries.TimeRangeQuery{Extent: timeseries.Extent{}}
 	rlo := &timeseries.RequestOptions{}
 
-	var valuer = &influxql.NowValuer{Now: time.Now()}
-
 	values, b, isBody := params.GetRequestValues(r)
 	if isBody {
 		trq.OriginalBody = b
 	}
 	statement := values.Get(upQuery)
-	if methods.HasBody(r.Method) {
-		raw, err := io.ReadAll(r.Body)
-		if err != nil {
-			return nil, nil, false, errors.ParseRequestBody(err)
+	if statement == "" && isBody && len(b) > 0 {
+		s := string(b)
+		if strings.Contains(s, "aggregateWindow(") && strings.Contains(s, "bucket:") {
+			return trq, rlo, true, flux.ParseTimeRangeQuery(r, b, trq, rlo)
 		}
-		r.Body.Close()
-		r.Body = io.NopCloser(bytes.NewReader(raw))
-		statement = string(raw)
-	}
-	if statement == "" {
 		return nil, nil, false, errors.MissingURLParam(upQuery)
 	}
 	trq.Statement = statement
+	return c.parseTimeRangeQueryInfluxQL(r, b, values, trq, rlo)
+}
+
+func (c *Client) parseTimeRangeQueryInfluxQL(r *http.Request, b []byte,
+	values url.Values, trq *timeseries.TimeRangeQuery,
+	rlo *timeseries.RequestOptions) (*timeseries.TimeRangeQuery,
+	*timeseries.RequestOptions, bool, error) {
+	if trq.Statement == "" {
+		return nil, nil, false, errors.MissingURLParam(upQuery)
+	}
+
+	var valuer = &influxql.NowValuer{Now: time.Now()}
 
 	if b, ok := epochToFlag[values.Get(upEpoch)]; ok {
 		rlo.TimeFormat = b
@@ -110,30 +110,6 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 	}
 
 	var cacheError error
-
-	// Try to parse using Flux.
-	fp := flux.NewParser(strings.NewReader(trq.Statement))
-	if fq, canOPC, err := fp.ParseQuery(); err == nil || canOPC {
-		if fq.Extent.End.IsZero() {
-			fq.Extent.End = time.Now()
-		}
-		if trq.Extent.Start.IsZero() {
-			trq.Extent = fq.Extent
-		} else if trq.Extent != fq.Extent {
-			// this condition means multiple queries were present, and had
-			// different time ranges
-			cacheError = errors.ErrNotTimeRangeQuery
-		}
-		trq.Step = fq.Step
-		trq.Statement = fq.String()
-		trq.ParsedQuery = fq
-		trq.TemplateURL = urls.Clone(r.URL)
-		qt := url.Values(http.Header(values).Clone())
-		qt.Set(upQuery, trq.Statement)
-		// Swap in the Tokenzed Query in the Url Params
-		trq.TemplateURL.RawQuery = qt.Encode()
-		return trq, rlo, canOPC || cacheError != nil, cacheError
-	}
 
 	p := influxql.NewParser(strings.NewReader(trq.Statement))
 	q, err := p.ParseQuery()
@@ -211,5 +187,4 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 	}
 
 	return trq, rlo, canObjectCache, nil
-
 }
