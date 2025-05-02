@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"strconv"
 
-	tctx "github.com/trickstercache/trickster/v2/pkg/proxy/context"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/headers"
 )
 
@@ -35,24 +34,27 @@ func SetBody(r *http.Request, body []byte) *http.Request {
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		r.Header.Set(headers.NameContentLength, strconv.Itoa(len(body)))
 		r.ContentLength = int64(len(body))
+		if rsc := GetResources(r); rsc != nil {
+			rsc.RequestBody = body // caches the body to avoid future io.ReadAlls
+		}
 	}
-	return r.WithContext(tctx.WithRequestBody(r.Context(), body))
+	return r
 }
 
 func GetBody(r *http.Request) ([]byte, error) {
-	body := tctx.RequestBody(r.Context())
-	if body != nil {
-		return body, nil
+	rsc := GetResources(r)
+	if rsc != nil && len(rsc.RequestBody) > 0 {
+		return rsc.RequestBody, nil // returns the cached body if exists
 	}
 	if r.Body == nil {
 		return nil, nil
 	}
-	var err error
-	body, err = io.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
 	}
 	r.Body.Close()
 	r.Body = io.NopCloser(bytes.NewReader(body)) // allows body to be re-read from byte 0
+	rsc.RequestBody = body                       // caches the body to avoid future io.ReadAlls
 	return body, nil
 }
