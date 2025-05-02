@@ -1,13 +1,33 @@
+/*
+ * Copyright 2018 The Trickster Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package flux
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/trickstercache/trickster/v2/pkg/observability/logging"
+	"github.com/trickstercache/trickster/v2/pkg/observability/logging/logger"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/errors"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/request"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/urls"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 	"github.com/trickstercache/trickster/v2/pkg/util/timeconv"
@@ -20,6 +40,7 @@ const EveryToken = "every:"
 const StartToken = "start:"
 const StopToken = ",stop:"
 const TimeRangeTokenPlaceholder = "<TIMERANGE_TOKEN>"
+const AttrQuery = "query"
 
 type Query struct {
 	original  string
@@ -41,7 +62,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 		return err
 	}
 	if frb.Type != "flux" || frb.Query == "" {
-		return errors.MissingRequestParam("query")
+		return errors.MissingRequestParam(AttrQuery)
 	}
 	trq.Statement = frb.Query
 	tokenizedStmt, extent, step, err := ParseQuery(frb.Query)
@@ -62,8 +83,32 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	return nil
 }
 
+const setExtentErrorLogEvent = "read request body failed in flux.SetExtent"
+
 func SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery,
-	extent *timeseries.Extent, q *Query) {
+	e *timeseries.Extent, q *Query) {
+	s := strings.ReplaceAll(q.tokenized, TimeRangeTokenPlaceholder,
+		fmt.Sprintf("start: %d, stop: %d", e.Start.Unix(), e.End.Unix()))
+	b, err := request.GetBody(r)
+	if err != nil || len(b) == 0 {
+		logger.Error(setExtentErrorLogEvent,
+			logging.Pairs{"error": err})
+		return
+	}
+	a := make(map[string]any, 16)
+	err = json.Unmarshal(b, &a)
+	if err != nil || a == nil {
+		logger.Error(setExtentErrorLogEvent,
+			logging.Pairs{"error": err})
+		return
+	}
+	a[AttrQuery] = s
+	b, err = json.Marshal(a)
+	if err != nil || len(b) == 0 {
+		logger.Error(setExtentErrorLogEvent,
+			logging.Pairs{"error": err})
+	}
+	request.SetBody(r, b)
 }
 
 func ParseQuery(input string) (string, timeseries.Extent, time.Duration, error) {
