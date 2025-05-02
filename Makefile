@@ -149,7 +149,7 @@ lint:
 
 GO_TEST_FLAGS ?= -coverprofile=.coverprofile
 .PHONY: test
-test: check-license-headers
+test: check-license-headers check-printlns
 	go test -timeout=5m -v ${GO_TEST_FLAGS} ./...
 
 .PHONY: data-race-test
@@ -213,6 +213,19 @@ check-license-headers:
 		fi ; \
 	done ; \
 	echo "" ; echo "✓ All code files have the required license header." ; echo ""
+
+.PHONY: check-printlns
+check-printlns:
+	@cd pkg && \
+	count=$$(git grep fmt.Println | wc -l); \
+	if [ "$$count" -ne 7 ]; then \
+		extra=$$((count - 7)); \
+		echo "" ; \
+		echo "$$extra unexpected fmt.Println(s) must be removed from the project code files."; \
+		echo "" ; \
+		exit 1; \
+	fi ; \
+	echo "" ; echo "✓ No Stray fmt.Println calls." ; echo ""
 
 .PHONY: spelling
 spelling:
