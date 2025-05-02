@@ -82,6 +82,17 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 		if strings.Contains(s, "aggregateWindow(") && strings.Contains(s, "bucket:") {
 			return trq, rlo, true, flux.ParseTimeRangeQuery(r, b, trq, rlo)
 		}
+		/* *INCOMING*
+		if methods.HasBody(r.Method) {
+			raw, err := request.GetBody(r)
+			if err != nil {
+				return nil, nil, false, errors.ParseRequestBody(err)
+			}
+			statement = string(raw)
+		}
+		if statement == "" {
+		* END INCOMING*
+		*/
 		return nil, nil, false, errors.MissingURLParam(upQuery)
 	}
 	trq.Statement = statement
@@ -176,6 +187,9 @@ func (c *Client) parseTimeRangeQueryInfluxQL(r *http.Request, b []byte,
 	trq.Statement = strings.Join(statements, " ; ")
 	trq.ParsedQuery = q
 	trq.TemplateURL = urls.Clone(r.URL)
+	trq.CacheKeyElements = map[string]string{
+		"q": trq.Statement,
+	}
 	qt := url.Values(http.Header(values).Clone())
 	qt.Set(upQuery, trq.Statement)
 
