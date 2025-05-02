@@ -149,7 +149,10 @@ lint:
 
 GO_TEST_FLAGS ?= -coverprofile=.coverprofile
 .PHONY: test
-test: check-license-headers check-printlns
+test: gotest check-license-headers check-printlns
+
+.PHONY: gotest
+gotest:
 	go test -timeout=5m -v ${GO_TEST_FLAGS} ./...
 
 .PHONY: data-race-test
