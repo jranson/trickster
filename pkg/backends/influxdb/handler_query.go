@@ -52,7 +52,7 @@ func (c *Client) QueryHandler(w http.ResponseWriter, r *http.Request) {
 // ParseTimeRangeQuery parses the key parts of a TimeRangeQuery from the inbound HTTP Request
 func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuery,
 	*timeseries.RequestOptions, bool, error) {
-	trq := &timeseries.TimeRangeQuery{Extent: timeseries.Extent{}}
+	trq := &timeseries.TimeRangeQuery{}
 	rlo := &timeseries.RequestOptions{}
 	values, b, isBody := params.GetRequestValues(r)
 	if isBody {
@@ -67,5 +67,6 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 		return nil, nil, false, errors.MissingURLParam(influxql.ParamQuery)
 	}
 	trq.Statement = statement
-	return influxql.ParseTimeRangeQuery(r, b, values, trq, rlo)
+	t, err := influxql.ParseTimeRangeQuery(r, b, values, trq, rlo)
+	return trq, rlo, t, err
 }

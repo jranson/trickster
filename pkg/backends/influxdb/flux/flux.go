@@ -41,6 +41,7 @@ const StartToken = "start:"
 const StopToken = ",stop:"
 const TimeRangeTokenPlaceholder = "<TIMERANGE_TOKEN>"
 const AttrQuery = "query"
+const FluxLanguage = "flux"
 
 type Query struct {
 	original  string
@@ -61,7 +62,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	if err != nil {
 		return err
 	}
-	if frb.Type != "flux" || frb.Query == "" {
+	if frb.Type != FluxLanguage || frb.Query == "" {
 		return errors.MissingRequestParam(AttrQuery)
 	}
 	trq.Statement = frb.Query

@@ -53,10 +53,9 @@ const (
 
 func ParseTimeRangeQuery(r *http.Request, b []byte,
 	values url.Values, trq *timeseries.TimeRangeQuery,
-	rlo *timeseries.RequestOptions) (*timeseries.TimeRangeQuery,
-	*timeseries.RequestOptions, bool, error) {
+	rlo *timeseries.RequestOptions) (bool, error) {
 	if trq.Statement == "" {
-		return nil, nil, false, errors.MissingURLParam(ParamQuery)
+		return false, errors.MissingURLParam(ParamQuery)
 	}
 
 	var valuer = &influxql.NowValuer{Now: time.Now()}
@@ -77,7 +76,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	p := influxql.NewParser(strings.NewReader(trq.Statement))
 	q, err := p.ParseQuery()
 	if err != nil {
-		return nil, nil, false, err
+		return false, err
 	}
 
 	trq.Step = -1
@@ -149,10 +148,10 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	trq.TemplateURL.RawQuery = qt.Encode()
 
 	if cacheError != nil {
-		return trq, rlo, true, cacheError
+		return true, cacheError
 	}
 
-	return trq, rlo, canObjectCache, nil
+	return canObjectCache, nil
 }
 
 func SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery,
