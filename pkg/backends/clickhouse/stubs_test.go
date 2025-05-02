@@ -46,8 +46,3 @@ func TestUnmarshalInstantaneous(t *testing.T) {
 	}
 
 }
-
-func TestQueryRangeHandler(t *testing.T) {
-	client := &Client{}
-	client.QueryRangeHandler(nil, nil)
-}
