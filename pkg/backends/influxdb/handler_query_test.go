@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/influxql"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/errors"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/request"
 	tu "github.com/trickstercache/trickster/v2/pkg/testutil"
@@ -187,7 +188,7 @@ func TestQueryHandlerNotSelect(t *testing.T) {
 }
 
 func TestParseTimeRangeQueryMissingQuery(t *testing.T) {
-	expected := errors.MissingURLParam(upQuery).Error()
+	expected := errors.MissingURLParam(influxql.ParamQuery).Error()
 	req := &http.Request{URL: &url.URL{
 		Scheme: "https",
 		Host:   "blah.com",

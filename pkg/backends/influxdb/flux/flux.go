@@ -21,6 +21,13 @@ const StartToken = "start:"
 const StopToken = ",stop:"
 const TimeRangeTokenPlaceholder = "<TIMERANGE_TOKEN>"
 
+type Query struct {
+	original  string
+	tokenized string
+	step      time.Duration
+	extent    timeseries.Extent
+}
+
 type RequestBody struct {
 	Query string `json:"query"`
 	Type  string `json:"type"`
@@ -41,11 +48,22 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	if err != nil {
 		return err
 	}
+	q := &Query{
+		original:  frb.Query,
+		tokenized: tokenizedStmt,
+		step:      step,
+		extent:    extent,
+	}
+	trq.ParsedQuery = q
 	trq.Step = step
 	trq.Statement = tokenizedStmt
 	trq.TemplateURL = urls.Clone(r.URL)
 	trq.Extent = extent
 	return nil
+}
+
+func SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery,
+	extent *timeseries.Extent, q *Query) {
 }
 
 func ParseQuery(input string) (string, timeseries.Extent, time.Duration, error) {
