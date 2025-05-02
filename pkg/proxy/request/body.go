@@ -35,7 +35,7 @@ func SetBody(r *http.Request, body []byte) {
 		r.Header.Set(headers.NameContentLength, strconv.Itoa(len(body)))
 		r.ContentLength = int64(len(body))
 		if rsc := GetResources(r); rsc != nil {
-			rsc.RequestBody = body // caches the body to avoid future io.ReadAlls
+			rsc.RequestBody = body // cache to avoid future calls to io.ReadAll
 		}
 	}
 }
@@ -54,6 +54,8 @@ func GetBody(r *http.Request) ([]byte, error) {
 	}
 	r.Body.Close()
 	r.Body = io.NopCloser(bytes.NewReader(body)) // allows body to be re-read from byte 0
-	rsc.RequestBody = body                       // caches the body to avoid future io.ReadAlls
+	if rsc != nil {
+		rsc.RequestBody = body // cache to avoid future calls to io.ReadAll
+	}
 	return body, nil
 }
