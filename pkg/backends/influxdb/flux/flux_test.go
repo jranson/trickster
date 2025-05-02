@@ -1,7 +1,6 @@
 package flux
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -32,13 +31,9 @@ func TestParseQuery(t *testing.T) {
 		End: time.Unix(1673136000, 0)}
 	if !e.Start.Equal(e2.Start) {
 		t.Error("invalid extent start")
-		fmt.Println(e)
-		fmt.Println(e2)
 	}
 	if !e.End.Equal(e2.End) {
 		t.Error("invalid extent end")
-		fmt.Println(e)
-		fmt.Println(e2)
 	}
 	if err != nil {
 		t.Error(err)
