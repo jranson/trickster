@@ -101,7 +101,6 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 	trq.TemplateURL = urls.Clone(r.URL)
 
 	if isBody {
-		// TODO: the return value (a new *http.Request) is not being used
 		request.SetBody(r, []byte(trq.Statement))
 	} else {
 		// Swap in the Tokenized Query in the Url Params

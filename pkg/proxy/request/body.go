@@ -25,7 +25,7 @@ import (
 	"github.com/trickstercache/trickster/v2/pkg/proxy/headers"
 )
 
-func SetBody(r *http.Request, body []byte) *http.Request {
+func SetBody(r *http.Request, body []byte) {
 	if len(body) == 0 {
 		r.Body = io.NopCloser(bytes.NewReader([]byte{}))
 		r.ContentLength = 0
@@ -38,7 +38,6 @@ func SetBody(r *http.Request, body []byte) *http.Request {
 			rsc.RequestBody = body // caches the body to avoid future io.ReadAlls
 		}
 	}
-	return r
 }
 
 func GetBody(r *http.Request) ([]byte, error) {
