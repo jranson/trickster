@@ -25,6 +25,7 @@ import (
 	lsql "github.com/trickstercache/trickster/v2/pkg/parsing/lex/sql"
 	"github.com/trickstercache/trickster/v2/pkg/parsing/sql"
 	"github.com/trickstercache/trickster/v2/pkg/parsing/token"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/contenttype"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries/sqlparser"
 	ts "github.com/trickstercache/trickster/v2/pkg/util/strings"
@@ -124,11 +125,11 @@ var tokenDurations = map[token.Typ]time.Duration{
 }
 
 var supportedFormats = map[string]byte{
-	"json":                          0,
-	"csv":                           1,
+	contenttype.JSON:                0,
+	contenttype.CSV:                 1,
 	"csvwithnames":                  2,
 	"tabseparated":                  3,
-	"tsv":                           3,
+	contenttype.TSV:                 3,
 	"tabseparatedwithnames":         4,
 	"tsvwithnames":                  4,
 	"tabseparatedwithnamesandtypes": 5,
