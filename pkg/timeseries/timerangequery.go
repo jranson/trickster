@@ -45,8 +45,6 @@ type TimeRangeQuery struct {
 	StepNS int64 `msg:"step"`
 	// BackfillTolerance can be updated to override the overall backfill tolerance per query
 	BackfillTolerance time.Duration `msg:"-"`
-	// BackfillToleranceNS is the nanosecond representation for BackfillTolerance
-	BackfillToleranceNS int64 `msg:"bft"`
 	// RecordLimit is the LIMIT value of the query
 	RecordLimit int `msg:"rl"`
 	// TimestampDefinition sets the definition for the Timestamp column in the in the timeseries based on the query

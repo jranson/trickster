@@ -97,7 +97,6 @@ func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuer
 	if trq.BackfillTolerance == 0 {
 		trq.BackfillTolerance = bf
 	}
-	trq.BackfillToleranceNS = bf.Nanoseconds()
 	trq.TemplateURL = urls.Clone(r.URL)
 
 	if isBody {

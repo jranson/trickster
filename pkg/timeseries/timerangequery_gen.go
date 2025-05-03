@@ -58,12 +58,6 @@ func (z *TimeRangeQuery) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "StepNS")
 				return
 			}
-		case "bft":
-			z.BackfillToleranceNS, err = dc.ReadInt64()
-			if err != nil {
-				err = msgp.WrapError(err, "BackfillToleranceNS")
-				return
-			}
 		case "rl":
 			z.RecordLimit, err = dc.ReadInt()
 			if err != nil {
@@ -157,9 +151,9 @@ func (z *TimeRangeQuery) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 9
+	// map header, size 8
 	// write "stmt"
-	err = en.Append(0x89, 0xa4, 0x73, 0x74, 0x6d, 0x74)
+	err = en.Append(0x88, 0xa4, 0x73, 0x74, 0x6d, 0x74)
 	if err != nil {
 		return
 	}
@@ -186,16 +180,6 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 	err = en.WriteInt64(z.StepNS)
 	if err != nil {
 		err = msgp.WrapError(err, "StepNS")
-		return
-	}
-	// write "bft"
-	err = en.Append(0xa3, 0x62, 0x66, 0x74)
-	if err != nil {
-		return
-	}
-	err = en.WriteInt64(z.BackfillToleranceNS)
-	if err != nil {
-		err = msgp.WrapError(err, "BackfillToleranceNS")
 		return
 	}
 	// write "rl"
@@ -280,9 +264,9 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *TimeRangeQuery) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 9
+	// map header, size 8
 	// string "stmt"
-	o = append(o, 0x89, 0xa4, 0x73, 0x74, 0x6d, 0x74)
+	o = append(o, 0x88, 0xa4, 0x73, 0x74, 0x6d, 0x74)
 	o = msgp.AppendString(o, z.Statement)
 	// string "ex"
 	o = append(o, 0xa2, 0x65, 0x78)
@@ -294,9 +278,6 @@ func (z *TimeRangeQuery) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "step"
 	o = append(o, 0xa4, 0x73, 0x74, 0x65, 0x70)
 	o = msgp.AppendInt64(o, z.StepNS)
-	// string "bft"
-	o = append(o, 0xa3, 0x62, 0x66, 0x74)
-	o = msgp.AppendInt64(o, z.BackfillToleranceNS)
 	// string "rl"
 	o = append(o, 0xa2, 0x72, 0x6c)
 	o = msgp.AppendInt(o, z.RecordLimit)
@@ -371,12 +352,6 @@ func (z *TimeRangeQuery) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			z.StepNS, bts, err = msgp.ReadInt64Bytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "StepNS")
-				return
-			}
-		case "bft":
-			z.BackfillToleranceNS, bts, err = msgp.ReadInt64Bytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "BackfillToleranceNS")
 				return
 			}
 		case "rl":
@@ -473,7 +448,7 @@ func (z *TimeRangeQuery) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *TimeRangeQuery) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Statement) + 3 + z.Extent.Msgsize() + 5 + msgp.Int64Size + 4 + msgp.Int64Size + 3 + msgp.IntSize + 6 + z.TimestampDefinition.Msgsize() + 7 + msgp.ArrayHeaderSize
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Statement) + 3 + z.Extent.Msgsize() + 5 + msgp.Int64Size + 3 + msgp.IntSize + 6 + z.TimestampDefinition.Msgsize() + 7 + msgp.ArrayHeaderSize
 	for za0001 := range z.TagFieldDefintions {
 		s += z.TagFieldDefintions[za0001].Msgsize()
 	}
