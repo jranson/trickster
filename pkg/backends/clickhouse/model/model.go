@@ -93,10 +93,10 @@ func marshalTimeseriesJSON(ds *dataset.DataSet, rlo *timeseries.RequestOptions,
 			logging.Pairs{"error": err})
 	}
 	if rlo != nil {
-		if rlo.VendorData == nil {
-			rlo.VendorData = make(map[string]string)
+		if rlo.ProviderData1 == nil {
+			rlo.ProviderData1 = make(map[string]string)
 		}
-		rlo.VendorData[formatHeader] = "JSON"
+		rlo.ProviderData1[formatHeader] = "JSON"
 	}
 	return json.Marshal(wf)
 }
@@ -163,10 +163,10 @@ func marshalTimeseriesXSV(ds *dataset.DataSet, rlo *timeseries.RequestOptions,
 
 	var h map[string]string
 	if rlo != nil {
-		if rlo.VendorData == nil {
-			rlo.VendorData = make(map[string]string)
+		if rlo.ProviderData1 == nil {
+			rlo.ProviderData1 = make(map[string]string)
 		}
-		h = rlo.VendorData
+		h = rlo.ProviderData1
 	}
 
 	if tw.separator == "" {
@@ -318,9 +318,9 @@ func MarshalTimeseriesWriter(ts timeseries.Timeseries,
 	}
 
 	var h http.Header
-	if rlo != nil && len(rlo.VendorData) > 0 {
+	if rlo != nil && len(rlo.ProviderData1) > 0 {
 		h = make(http.Header)
-		for k, v := range rlo.VendorData {
+		for k, v := range rlo.ProviderData1 {
 			h.Set(k, v)
 		}
 	}
