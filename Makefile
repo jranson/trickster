@@ -149,7 +149,7 @@ lint:
 
 GO_TEST_FLAGS ?= -coverprofile=.coverprofile
 .PHONY: test
-test: gotest check-license-headers check-printlns
+test: gotest check-license-headers check-fmtprints
 
 .PHONY: gotest
 gotest:
@@ -202,7 +202,7 @@ check-codegen:
 	@git diff --name-only --exit-code ${CODEGEN_PATHS}
 
 .PHONY: check-license-headers
-check-license-headers: SHELL:=/bin/bash
+check-license-headers: SHELL:=/bin/sh
 check-license-headers:
 	@for file in $$(find ./pkg ./cmd -name '*.go') ; \
 	do \
@@ -215,20 +215,27 @@ check-license-headers:
 			exit 1 ; \
 		fi ; \
 	done ; \
-	echo "" ; echo "✓ All code files have the required license header." ; echo ""
+	echo "" ; echo "\033[1;32m✓\033[0m All code files have the required license header." ; echo ""
 
-.PHONY: check-printlns
-check-printlns:
+.PHONY: check-fmtprints
+check-fmtprints: SHELL:=/bin/sh
+check-fmtprints: # fails if there are any fmt.Print* calls outside of the 3 approved files
 	@cd pkg && \
-	count=$$(git grep fmt.Println | wc -l); \
-	if [ "$$count" -ne 7 ]; then \
-		extra=$$((count - 7)); \
+	fmtprints=$$(git grep -n fmt.Print | grep -v 'appinfo/usage/usage.go' | grep -v 'config/validate/validate.go' | grep -v '^daemon/'); \
+	count=0; \
+	if [ -n "$$fmtprints" ]; then \
+		count="$$(echo "$$fmtprints" | wc -l | tr -d '[:space:]')" ; \
+	fi; \
+	if [ "$$count" -ne 0 ]; then \
 		echo "" ; \
-		echo "$$extra unexpected fmt.Println(s) must be removed from the project code files."; \
+		echo "\033[1;31m⨉\033[0m ($$count) unexpected fmt.Print(s) must be removed from the codebase:"; \
+		echo "" ; \
+		echo "$$fmtprints" ; \
+		echo "" ; \
 		echo "" ; \
 		exit 1; \
 	fi ; \
-	echo "" ; echo "✓ No Stray fmt.Println calls." ; echo ""
+	echo "" ; echo "\033[1;32m✓\033[0m No Stray fmt.Println calls." ; echo ""
 
 .PHONY: spelling
 spelling:
