@@ -35,7 +35,10 @@ type SeriesHeader struct {
 	Name string `msg:"name"`
 	// Tags is the map of tags associated with the Series
 	Tags Tags `msg:"tags"`
-	// FieldsList is the ordered list of fields in the Series
+	// TagsList is the ordered list of tag-based Field Definitions in the Series.
+	// Optional and used by some providers.
+	TagsList []timeseries.FieldDefinition `msg:"tagslist"`
+	// FieldsList is the ordered list of value-based Field Definitions in the Series.
 	FieldsList []timeseries.FieldDefinition `msg:"fields"`
 	// TimestampIndex is the index of the TimeStamp field in the output when
 	// it's time to serialize the DataSet for the wire
@@ -64,6 +67,10 @@ func (sh *SeriesHeader) CalculateHash() Hash {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
+	for _, fd := range sh.TagsList {
+		hash.Write([]byte(fd.Name))
+		hash.Write([]byte{byte(fd.DataType)})
+	}
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, sh.TimestampIndex)
 	hash.Write(b)
@@ -77,12 +84,14 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 		Name:           sh.Name,
 		Tags:           sh.Tags.Clone(),
 		FieldsList:     make([]timeseries.FieldDefinition, len(sh.FieldsList)),
+		TagsList:       make([]timeseries.FieldDefinition, len(sh.TagsList)),
 		TimestampIndex: sh.TimestampIndex,
 		QueryStatement: sh.QueryStatement,
 		Size:           sh.Size,
 		hash:           sh.hash,
 	}
 	copy(clone.FieldsList, sh.FieldsList)
+	copy(clone.TagsList, sh.TagsList)
 	return clone
 }
 
@@ -91,6 +100,9 @@ func (sh *SeriesHeader) CalculateSize() int {
 	c := len(sh.Name) + sh.Tags.Size() + 8 + len(sh.QueryStatement) + 28
 	for i := range sh.FieldsList {
 		c += len(sh.FieldsList[i].Name) + 17
+	}
+	for i := range sh.TagsList {
+		c += len(sh.TagsList[i].Name) + 17
 	}
 	sh.Size = c
 	return c
@@ -112,6 +124,17 @@ func (sh *SeriesHeader) String() string {
 		sb.WriteString(`"fields":[`)
 		l := len(sh.FieldsList)
 		for i, fd := range sh.FieldsList {
+			fmt.Fprintf(sb, `"%s"`, fd.Name)
+			if i < l-1 {
+				sb.WriteByte(',')
+			}
+		}
+		sb.WriteString("],")
+	}
+	if len(sh.TagsList) > 0 {
+		sb.WriteString(`"tagsList":[`)
+		l := len(sh.TagsList)
+		for i, fd := range sh.TagsList {
 			fmt.Fprintf(sb, `"%s"`, fd.Name)
 			if i < l-1 {
 				sb.WriteByte(',')
