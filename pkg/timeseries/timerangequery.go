@@ -41,7 +41,7 @@ type TimeRangeQuery struct {
 	TemplateURL *url.URL `msg:"-"`
 	// IsOffset is true if the query uses a relative offset modifier
 	IsOffset bool `msg:"-"`
-	// StepNS is the nanosecond representation for Step
+	// StepNS is the nanosecond representation for Step, required for MsgPack
 	StepNS int64 `msg:"step"`
 	// BackfillTolerance can be updated to override the overall backfill tolerance per query
 	BackfillTolerance time.Duration `msg:"-"`
