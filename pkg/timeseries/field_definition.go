@@ -33,6 +33,10 @@ const (
 	Bool
 	Byte
 	Int16
+	Uint64
+	DateTimeRFC3339
+	DateTimeRFC3339Nano
+	Null
 )
 
 // FieldDataType is a byte representing the data type of a Field
