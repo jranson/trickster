@@ -38,22 +38,29 @@ func (s CounterSet[T]) Increment(key T, cnt int) (int, bool) {
 	return cnt, false
 }
 
-// Count returns the value for the provided key, or -1 if the key doesn't exist.
-func (s CounterSet[T]) Count(key T) (int, bool) {
+// Reset resets the CounterSet value for 'key' to 0. If the key is not present
+// in the map, it is added and set to 0. Reset is not safe for concurrency.
+func (s CounterSet[T]) Reset(key T) {
+	s[key] = 0
+}
+
+// Value returns the value for the provided key, or -1 if the key doesn't exist.
+func (s CounterSet[T]) Value(key T) (int, bool) {
 	if i, ok := s[key]; ok {
 		return i, true
 	}
 	return -1, false
 }
 
-// CounterSet with string keys
+// StringCounterSet is CounterSet with string keys
+type StringCounterSet = CounterSet[string]
 
 // NewStringCounterSet returns a new StringCounterSet
-func NewStringCounterSet() CounterSet[string] {
-	return make(CounterSet[string])
+func NewStringCounterSet() StringCounterSet {
+	return make(StringCounterSet)
 }
 
 // NewStringCounterSetCap returns a new StringCounterSet with a capacity set.
-func NewStringCounterSetCap(capacity int) CounterSet[string] {
-	return make(CounterSet[string], capacity)
+func NewStringCounterSetCap(capacity int) StringCounterSet {
+	return make(StringCounterSet, capacity)
 }
