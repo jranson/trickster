@@ -64,6 +64,10 @@ func (f Format) IsFluxOutputJSON() bool {
 	return f&isFluxOutputJSON == isFluxOutputJSON
 }
 
+func (f Format) IsPost() bool {
+	return f&isFlux == isFlux || f&isInfluxqlPost == isInfluxqlPost
+}
+
 func Detect(r *http.Request) Format {
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		return Unknown
