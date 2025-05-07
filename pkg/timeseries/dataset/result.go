@@ -88,7 +88,7 @@ func (r *Result) String() string {
 		fmt.Fprintf(sb, `"error":"%s",`, r.Error)
 	}
 	fmt.Fprintf(sb, `"statementID":%d,`, r.StatementID)
-	sb.WriteString("series:[")
+	sb.WriteString(`"series":[`)
 	l := len(r.SeriesList)
 	for i, s := range r.SeriesList {
 		sb.WriteString(s.String())

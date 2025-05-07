@@ -19,9 +19,7 @@
 package dataset
 
 import (
-	"encoding/binary"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/trickstercache/trickster/v2/pkg/checksum/fnv"
@@ -45,9 +43,6 @@ type SeriesHeader struct {
 	TagFieldsList timeseries.FieldDefinitions `msg:"tagFields"`
 	// FieldsList is the ordered list of value-based Field Definitions in the Series.
 	ValueFieldsList timeseries.FieldDefinitions `msg:"fields"`
-	// TimestampIndex is the index of the TimeStamp field in the output when
-	// it's time to serialize the DataSet for the wire
-	TimestampIndex uint64 `msg:"ti"` // TODO: DO WE NEED THIS? We have TFD so it seems duplicative.
 	// QueryStatement is the original query to which this DataSet is associated
 	QueryStatement string `msg:"query"`
 	// Size is the memory utilization of the Header in bytes
@@ -76,9 +71,10 @@ func (sh *SeriesHeader) CalculateHash() Hash {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, sh.TimestampIndex)
-	hash.Write(b)
+	if sh.TimestampField.DataType != timeseries.Unknown {
+		hash.Write([]byte(sh.TimestampField.Name))
+		hash.Write([]byte{byte(sh.TimestampField.DataType)})
+	}
 	sh.hash = Hash(hash.Sum64())
 	return sh.hash
 }
@@ -90,7 +86,7 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 		Tags:            sh.Tags.Clone(),
 		ValueFieldsList: make([]timeseries.FieldDefinition, len(sh.ValueFieldsList)),
 		TagFieldsList:   make([]timeseries.FieldDefinition, len(sh.TagFieldsList)),
-		TimestampIndex:  sh.TimestampIndex,
+		TimestampField:  sh.TimestampField,
 		QueryStatement:  sh.QueryStatement,
 		Size:            sh.Size,
 		hash:            sh.hash,
@@ -102,12 +98,14 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 
 // CalculateSize sets and returns the header size
 func (sh *SeriesHeader) CalculateSize() int {
-	c := len(sh.Name) + sh.Tags.Size() + 8 + len(sh.QueryStatement) + 28
+	// 16 is the string header size on 64-bit arch, while 8 is for sh.Size
+	c := len(sh.Name) + 16 + sh.Tags.Size() + len(sh.QueryStatement) + 16 +
+		sh.TimestampField.Size() + 8
 	for i := range sh.ValueFieldsList {
-		c += len(sh.ValueFieldsList[i].Name) + 17
+		c += sh.ValueFieldsList[i].Size()
 	}
 	for i := range sh.TagFieldsList {
-		c += len(sh.TagFieldsList[i].Name) + 17
+		c += sh.TagFieldsList[i].Size()
 	}
 	sh.Size = c
 	return c
@@ -147,7 +145,7 @@ func (sh *SeriesHeader) String() string {
 		}
 		sb.WriteString("],")
 	}
-	sb.WriteString(`"timestampIndex":` + strconv.FormatUint(sh.TimestampIndex, 10))
+	fmt.Fprintf(sb, `"timeStampField":"%s"`, sh.TimestampField.Name)
 	sb.WriteByte('}')
 	return sb.String()
 }

@@ -56,14 +56,14 @@ func TestSeriesSize(t *testing.T) {
 
 func TestString(t *testing.T) {
 	expected := `{"header":{"name":"test","query":"SELECT TRICKSTER!",` +
-		`"tags":"test1=value1","fields":["Field1"],"timestampIndex":37},` +
-		`points:[{5000000000,1,37},{10000000000,1,24}]}`
+		`"tags":"test1=value1","fields":["Field1"],"timeStampField":""},` +
+		`"points":[{5000000000,1,37},{10000000000,1,24}]}`
 	s := testSeries()
 	if s.String() != expected {
 		t.Errorf("expected %s got %s", expected, s.String())
 	}
 
-	expected = "[15360041599306893527]"
+	expected = "[7495009601560388562]"
 	sl := SeriesList{s}
 	if sl.String() != expected {
 		t.Errorf("expected %s got %s", expected, sl.String())
@@ -82,8 +82,7 @@ func testSeriesHeader() SeriesHeader {
 				DataType: timeseries.FieldDataType(1),
 			},
 		},
-		TimestampIndex: 37,
-		Size:           56,
+		Size: 56,
 	}
 	return sh
 }
@@ -99,8 +98,7 @@ func testSeriesHeader2() SeriesHeader {
 				DataType: timeseries.FieldDataType(1),
 			},
 		},
-		TimestampIndex: 37,
-		Size:           56,
+		Size: 56,
 	}
 	return sh
 }
@@ -116,8 +114,7 @@ func testSeriesHeader3() SeriesHeader {
 				DataType: timeseries.FieldDataType(1),
 			},
 		},
-		TimestampIndex: 37,
-		Size:           56,
+		Size: 56,
 	}
 	return sh
 }
