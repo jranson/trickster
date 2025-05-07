@@ -26,7 +26,7 @@ func testHeader() *SeriesHeader {
 	return &SeriesHeader{
 		Name: "test",
 		Tags: Tags{"tag1": "value1", "tag2": "trickster"},
-		FieldsList: []timeseries.FieldDefinition{
+		ValueFieldsList: []timeseries.FieldDefinition{
 			{
 				Name:     "time",
 				DataType: timeseries.Int64,

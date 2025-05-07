@@ -28,3 +28,12 @@ func SafeAdd(a, b int) (int, bool) {
 	}
 	return a + b, true
 }
+
+// SafeAdd64 returns (a + b, true) if the sum value wouldn't overflow MaxInt64.
+// Otherwise, 0 and false are returned.
+func SafeAdd64(a, b int64) (int64, bool) {
+	if (b > 0 && a > math.MaxInt64-b) || (b < 0 && a < math.MinInt64-b) {
+		return 0, false // overflow would occur
+	}
+	return a + b, true
+}

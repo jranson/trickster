@@ -49,12 +49,21 @@ type FieldDefinition struct {
 	DataType       FieldDataType `msg:"type" json:"type"`
 	OutputPosition int           `msg:"pos" json:"pos,omitempty"`
 	SDataType      string        `msg:"stype" json:"stype,omitempty"`
-	ProviderData1  int           `msg:"provider1" json:"provider1,omitempty"`
-	ProviderData2  int           `msg:"provider2" json:"provider2,omitempty"`
+	// Fields reserved for Provider use
+	ProviderData1 int `msg:"provider1" json:"provider1,omitempty"`
+	ProviderData2 int `msg:"provider2" json:"provider2,omitempty"`
 }
 
 // FieldDefinitions represents a list type FieldDefinition
 type FieldDefinitions []FieldDefinition
+
+// SeriesFields groups together a Series's Timestamp, Tags and Value Fields
+type SeriesFields struct {
+	Timestamp     FieldDefinition
+	Tags          FieldDefinitions
+	Values        FieldDefinitions
+	ResultNameCol int
+}
 
 // Size returns the size of the FieldDefintions in bytes
 func (fd FieldDefinition) Size() int {
@@ -67,6 +76,12 @@ func (fd FieldDefinition) String() string {
 		return errors.NewErrorBody(err)
 	}
 	return string(b)
+}
+
+func (fds FieldDefinitions) Clone() FieldDefinitions {
+	out := make(FieldDefinitions, len(fds))
+	copy(out, fds)
+	return out
 }
 
 func (fds FieldDefinitions) String() string {

@@ -33,16 +33,21 @@ import (
 type SeriesHeader struct {
 	// Name is the name of the Series
 	Name string `msg:"name"`
-	// Tags is the map of tags associated with the Series
+	// Tags is the map of tags associated with the Series. Each key will map to
+	// a fd.Name in TagFieldsList, with values representing the specific tag
+	// values for this Series.
 	Tags Tags `msg:"tags"`
-	// TagsList is the ordered list of tag-based Field Definitions in the Series.
-	// Optional and used by some providers.
-	TagsList []timeseries.FieldDefinition `msg:"tagslist"`
+	// TimestampField is the Field Definitions for the timestamp field.
+	// Optional and used by some providers. TODO: use by more/all TSDB providers
+	TimestampField timeseries.FieldDefinition `msg:"timestampField"`
+	// TagFieldsList is the ordered list of tag-based Field Definitions in the
+	// Series. Optional and used by some providers. TODO: use by more/all TSDB providers
+	TagFieldsList timeseries.FieldDefinitions `msg:"tagFields"`
 	// FieldsList is the ordered list of value-based Field Definitions in the Series.
-	FieldsList []timeseries.FieldDefinition `msg:"fields"`
+	ValueFieldsList timeseries.FieldDefinitions `msg:"fields"`
 	// TimestampIndex is the index of the TimeStamp field in the output when
 	// it's time to serialize the DataSet for the wire
-	TimestampIndex uint64 `msg:"ti"`
+	TimestampIndex uint64 `msg:"ti"` // TODO: DO WE NEED THIS? We have TFD so it seems duplicative.
 	// QueryStatement is the original query to which this DataSet is associated
 	QueryStatement string `msg:"query"`
 	// Size is the memory utilization of the Header in bytes
@@ -63,11 +68,11 @@ func (sh *SeriesHeader) CalculateHash() Hash {
 		hash.Write([]byte(k))
 		hash.Write([]byte(sh.Tags[k]))
 	}
-	for _, fd := range sh.FieldsList {
+	for _, fd := range sh.ValueFieldsList {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
-	for _, fd := range sh.TagsList {
+	for _, fd := range sh.TagFieldsList {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
@@ -81,28 +86,28 @@ func (sh *SeriesHeader) CalculateHash() Hash {
 // Clone returns a perfect, new copy of the SeriesHeader
 func (sh *SeriesHeader) Clone() SeriesHeader {
 	clone := SeriesHeader{
-		Name:           sh.Name,
-		Tags:           sh.Tags.Clone(),
-		FieldsList:     make([]timeseries.FieldDefinition, len(sh.FieldsList)),
-		TagsList:       make([]timeseries.FieldDefinition, len(sh.TagsList)),
-		TimestampIndex: sh.TimestampIndex,
-		QueryStatement: sh.QueryStatement,
-		Size:           sh.Size,
-		hash:           sh.hash,
+		Name:            sh.Name,
+		Tags:            sh.Tags.Clone(),
+		ValueFieldsList: make([]timeseries.FieldDefinition, len(sh.ValueFieldsList)),
+		TagFieldsList:   make([]timeseries.FieldDefinition, len(sh.TagFieldsList)),
+		TimestampIndex:  sh.TimestampIndex,
+		QueryStatement:  sh.QueryStatement,
+		Size:            sh.Size,
+		hash:            sh.hash,
 	}
-	copy(clone.FieldsList, sh.FieldsList)
-	copy(clone.TagsList, sh.TagsList)
+	copy(clone.ValueFieldsList, sh.ValueFieldsList)
+	copy(clone.TagFieldsList, sh.TagFieldsList)
 	return clone
 }
 
 // CalculateSize sets and returns the header size
 func (sh *SeriesHeader) CalculateSize() int {
 	c := len(sh.Name) + sh.Tags.Size() + 8 + len(sh.QueryStatement) + 28
-	for i := range sh.FieldsList {
-		c += len(sh.FieldsList[i].Name) + 17
+	for i := range sh.ValueFieldsList {
+		c += len(sh.ValueFieldsList[i].Name) + 17
 	}
-	for i := range sh.TagsList {
-		c += len(sh.TagsList[i].Name) + 17
+	for i := range sh.TagFieldsList {
+		c += len(sh.TagFieldsList[i].Name) + 17
 	}
 	sh.Size = c
 	return c
@@ -120,10 +125,10 @@ func (sh *SeriesHeader) String() string {
 	if len(sh.Tags) > 0 {
 		fmt.Fprintf(sb, `"tags":"%s",`, sh.Tags.String())
 	}
-	if len(sh.FieldsList) > 0 {
+	if len(sh.ValueFieldsList) > 0 {
 		sb.WriteString(`"fields":[`)
-		l := len(sh.FieldsList)
-		for i, fd := range sh.FieldsList {
+		l := len(sh.ValueFieldsList)
+		for i, fd := range sh.ValueFieldsList {
 			fmt.Fprintf(sb, `"%s"`, fd.Name)
 			if i < l-1 {
 				sb.WriteByte(',')
@@ -131,10 +136,10 @@ func (sh *SeriesHeader) String() string {
 		}
 		sb.WriteString("],")
 	}
-	if len(sh.TagsList) > 0 {
+	if len(sh.TagFieldsList) > 0 {
 		sb.WriteString(`"tagsList":[`)
-		l := len(sh.TagsList)
-		for i, fd := range sh.TagsList {
+		l := len(sh.TagFieldsList)
+		for i, fd := range sh.TagFieldsList {
 			fmt.Fprintf(sb, `"%s"`, fd.Name)
 			if i < l-1 {
 				sb.WriteByte(',')

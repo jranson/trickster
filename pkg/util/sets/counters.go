@@ -44,7 +44,7 @@ func (s CounterSet[T]) Reset(key T) {
 	s[key] = 0
 }
 
-// Value returns the value for the provided key, or -1 if the key doesn't exist.
+// Value returns the value for the provided key, or false if it doesn't exist.
 func (s CounterSet[T]) Value(key T) (int, bool) {
 	if i, ok := s[key]; ok {
 		return i, true

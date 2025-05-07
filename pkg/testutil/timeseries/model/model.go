@@ -98,7 +98,7 @@ func UnmarshalTimeseriesReader(reader io.Reader, trq *timeseries.TimeRangeQuery)
 			Name:     "value",
 			DataType: timeseries.String,
 		}
-		sh.FieldsList = []timeseries.FieldDefinition{fd}
+		sh.ValueFieldsList = []timeseries.FieldDefinition{fd}
 		sh.CalculateHash()
 		var pts dataset.Points
 		l := len(pr.Values)

@@ -76,7 +76,7 @@ func testSeriesHeader() SeriesHeader {
 		Name:           "test",
 		QueryStatement: "SELECT TRICKSTER!",
 		Tags:           Tags{"test1": "value1"},
-		FieldsList: []timeseries.FieldDefinition{
+		ValueFieldsList: []timeseries.FieldDefinition{
 			{
 				Name:     "Field1",
 				DataType: timeseries.FieldDataType(1),
@@ -93,7 +93,7 @@ func testSeriesHeader2() SeriesHeader {
 		Name:           "test2",
 		QueryStatement: "SELECT TRICKSTER2!",
 		Tags:           Tags{"test2": "value2"},
-		FieldsList: []timeseries.FieldDefinition{
+		ValueFieldsList: []timeseries.FieldDefinition{
 			{
 				Name:     "Field1",
 				DataType: timeseries.FieldDataType(1),
@@ -110,7 +110,7 @@ func testSeriesHeader3() SeriesHeader {
 		Name:           "test3",
 		QueryStatement: "SELECT TRICKSTER!",
 		Tags:           Tags{"test3": "value3"},
-		FieldsList: []timeseries.FieldDefinition{
+		ValueFieldsList: []timeseries.FieldDefinition{
 			{
 				Name:     "Field1",
 				DataType: timeseries.FieldDataType(1),
@@ -133,8 +133,8 @@ func TestSeriesHeaderClone(t *testing.T) {
 	sh := testSeriesHeader()
 	sh2 := sh.Clone()
 	if sh2.Size != sh.Size ||
-		len(sh2.FieldsList) != 1 ||
-		sh2.FieldsList[0].Name != "Field1" {
+		len(sh2.ValueFieldsList) != 1 ||
+		sh2.ValueFieldsList[0].Name != "Field1" {
 		t.Error("series header clone mismatch")
 	}
 

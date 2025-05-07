@@ -20,7 +20,6 @@ package dataset
 
 import (
 	"github.com/tinylib/msgp/msgp"
-	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 )
 
 // DecodeMsg implements msgp.Decodable
@@ -53,43 +52,23 @@ func (z *SeriesHeader) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "Tags")
 				return
 			}
-		case "tagslist":
-			var zb0002 uint32
-			zb0002, err = dc.ReadArrayHeader()
+		case "timestampField":
+			err = z.TimestampField.DecodeMsg(dc)
 			if err != nil {
-				err = msgp.WrapError(err, "TagsList")
+				err = msgp.WrapError(err, "TimestampField")
 				return
 			}
-			if cap(z.TagsList) >= int(zb0002) {
-				z.TagsList = (z.TagsList)[:zb0002]
-			} else {
-				z.TagsList = make([]timeseries.FieldDefinition, zb0002)
-			}
-			for za0001 := range z.TagsList {
-				err = z.TagsList[za0001].DecodeMsg(dc)
-				if err != nil {
-					err = msgp.WrapError(err, "TagsList", za0001)
-					return
-				}
+		case "tagFields":
+			err = z.TagFieldsList.DecodeMsg(dc)
+			if err != nil {
+				err = msgp.WrapError(err, "TagFieldsList")
+				return
 			}
 		case "fields":
-			var zb0003 uint32
-			zb0003, err = dc.ReadArrayHeader()
+			err = z.ValueFieldsList.DecodeMsg(dc)
 			if err != nil {
-				err = msgp.WrapError(err, "FieldsList")
+				err = msgp.WrapError(err, "ValueFieldsList")
 				return
-			}
-			if cap(z.FieldsList) >= int(zb0003) {
-				z.FieldsList = (z.FieldsList)[:zb0003]
-			} else {
-				z.FieldsList = make([]timeseries.FieldDefinition, zb0003)
-			}
-			for za0002 := range z.FieldsList {
-				err = z.FieldsList[za0002].DecodeMsg(dc)
-				if err != nil {
-					err = msgp.WrapError(err, "FieldsList", za0002)
-					return
-				}
 			}
 		case "ti":
 			z.TimestampIndex, err = dc.ReadUint64()
@@ -122,9 +101,9 @@ func (z *SeriesHeader) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 7
+	// map header, size 8
 	// write "name"
-	err = en.Append(0x87, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	err = en.Append(0x88, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	if err != nil {
 		return
 	}
@@ -143,39 +122,35 @@ func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "Tags")
 		return
 	}
-	// write "tagslist"
-	err = en.Append(0xa8, 0x74, 0x61, 0x67, 0x73, 0x6c, 0x69, 0x73, 0x74)
+	// write "timestampField"
+	err = en.Append(0xae, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x46, 0x69, 0x65, 0x6c, 0x64)
 	if err != nil {
 		return
 	}
-	err = en.WriteArrayHeader(uint32(len(z.TagsList)))
+	err = z.TimestampField.EncodeMsg(en)
 	if err != nil {
-		err = msgp.WrapError(err, "TagsList")
+		err = msgp.WrapError(err, "TimestampField")
 		return
 	}
-	for za0001 := range z.TagsList {
-		err = z.TagsList[za0001].EncodeMsg(en)
-		if err != nil {
-			err = msgp.WrapError(err, "TagsList", za0001)
-			return
-		}
+	// write "tagFields"
+	err = en.Append(0xa9, 0x74, 0x61, 0x67, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
+	if err != nil {
+		return
+	}
+	err = z.TagFieldsList.EncodeMsg(en)
+	if err != nil {
+		err = msgp.WrapError(err, "TagFieldsList")
+		return
 	}
 	// write "fields"
 	err = en.Append(0xa6, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73)
 	if err != nil {
 		return
 	}
-	err = en.WriteArrayHeader(uint32(len(z.FieldsList)))
+	err = z.ValueFieldsList.EncodeMsg(en)
 	if err != nil {
-		err = msgp.WrapError(err, "FieldsList")
+		err = msgp.WrapError(err, "ValueFieldsList")
 		return
-	}
-	for za0002 := range z.FieldsList {
-		err = z.FieldsList[za0002].EncodeMsg(en)
-		if err != nil {
-			err = msgp.WrapError(err, "FieldsList", za0002)
-			return
-		}
 	}
 	// write "ti"
 	err = en.Append(0xa2, 0x74, 0x69)
@@ -213,9 +188,9 @@ func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *SeriesHeader) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 7
+	// map header, size 8
 	// string "name"
-	o = append(o, 0x87, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	o = append(o, 0x88, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	o = msgp.AppendString(o, z.Name)
 	// string "tags"
 	o = append(o, 0xa4, 0x74, 0x61, 0x67, 0x73)
@@ -224,25 +199,26 @@ func (z *SeriesHeader) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "Tags")
 		return
 	}
-	// string "tagslist"
-	o = append(o, 0xa8, 0x74, 0x61, 0x67, 0x73, 0x6c, 0x69, 0x73, 0x74)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.TagsList)))
-	for za0001 := range z.TagsList {
-		o, err = z.TagsList[za0001].MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "TagsList", za0001)
-			return
-		}
+	// string "timestampField"
+	o = append(o, 0xae, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x46, 0x69, 0x65, 0x6c, 0x64)
+	o, err = z.TimestampField.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "TimestampField")
+		return
+	}
+	// string "tagFields"
+	o = append(o, 0xa9, 0x74, 0x61, 0x67, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
+	o, err = z.TagFieldsList.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "TagFieldsList")
+		return
 	}
 	// string "fields"
 	o = append(o, 0xa6, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.FieldsList)))
-	for za0002 := range z.FieldsList {
-		o, err = z.FieldsList[za0002].MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "FieldsList", za0002)
-			return
-		}
+	o, err = z.ValueFieldsList.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "ValueFieldsList")
+		return
 	}
 	// string "ti"
 	o = append(o, 0xa2, 0x74, 0x69)
@@ -286,43 +262,23 @@ func (z *SeriesHeader) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Tags")
 				return
 			}
-		case "tagslist":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
+		case "timestampField":
+			bts, err = z.TimestampField.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "TagsList")
+				err = msgp.WrapError(err, "TimestampField")
 				return
 			}
-			if cap(z.TagsList) >= int(zb0002) {
-				z.TagsList = (z.TagsList)[:zb0002]
-			} else {
-				z.TagsList = make([]timeseries.FieldDefinition, zb0002)
-			}
-			for za0001 := range z.TagsList {
-				bts, err = z.TagsList[za0001].UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "TagsList", za0001)
-					return
-				}
+		case "tagFields":
+			bts, err = z.TagFieldsList.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "TagFieldsList")
+				return
 			}
 		case "fields":
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
+			bts, err = z.ValueFieldsList.UnmarshalMsg(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "FieldsList")
+				err = msgp.WrapError(err, "ValueFieldsList")
 				return
-			}
-			if cap(z.FieldsList) >= int(zb0003) {
-				z.FieldsList = (z.FieldsList)[:zb0003]
-			} else {
-				z.FieldsList = make([]timeseries.FieldDefinition, zb0003)
-			}
-			for za0002 := range z.FieldsList {
-				bts, err = z.FieldsList[za0002].UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "FieldsList", za0002)
-					return
-				}
 			}
 		case "ti":
 			z.TimestampIndex, bts, err = msgp.ReadUint64Bytes(bts)
@@ -356,14 +312,6 @@ func (z *SeriesHeader) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SeriesHeader) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + z.Tags.Msgsize() + 9 + msgp.ArrayHeaderSize
-	for za0001 := range z.TagsList {
-		s += z.TagsList[za0001].Msgsize()
-	}
-	s += 7 + msgp.ArrayHeaderSize
-	for za0002 := range z.FieldsList {
-		s += z.FieldsList[za0002].Msgsize()
-	}
-	s += 3 + msgp.Uint64Size + 6 + msgp.StringPrefixSize + len(z.QueryStatement) + 5 + msgp.IntSize
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + z.Tags.Msgsize() + 15 + z.TimestampField.Msgsize() + 10 + z.TagFieldsList.Msgsize() + 7 + z.ValueFieldsList.Msgsize() + 3 + msgp.Uint64Size + 6 + msgp.StringPrefixSize + len(z.QueryStatement) + 5 + msgp.IntSize
 	return
 }
