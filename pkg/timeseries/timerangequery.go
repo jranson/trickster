@@ -48,11 +48,11 @@ type TimeRangeQuery struct {
 	// RecordLimit is the LIMIT value of the query
 	RecordLimit int `msg:"rl"`
 	// TimestampDefinition sets the definition for the Timestamp column in the in the timeseries based on the query
-	TimestampDefinition FieldDefinition `msg:"tsdef"`
+	TimestampDefinition FieldDefinition `msg:"-"`
 	// TagFieldDefinitions contains the definitions for Tag columns in the timeseries, based on the query
-	TagFieldDefintions []FieldDefinition `msg:"tfdefs"`
+	TagFieldDefintions []FieldDefinition `msg:"-"`
 	// ValueFieldDefinitions contains the definitions for Value columns in the timeseries, based on the query
-	ValueFieldDefinitions []FieldDefinition `msg:"vfdefs"`
+	ValueFieldDefinitions []FieldDefinition `msg:"-"`
 	// ParsedQuery is a member for the vendor-specific query object
 	ParsedQuery any `msg:"-"`
 	// OriginalBody is the original inbound request body untransformed if POST

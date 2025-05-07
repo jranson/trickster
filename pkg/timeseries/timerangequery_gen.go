@@ -64,79 +64,35 @@ func (z *TimeRangeQuery) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "RecordLimit")
 				return
 			}
-		case "tsdef":
-			err = z.TimestampDefinition.DecodeMsg(dc)
-			if err != nil {
-				err = msgp.WrapError(err, "TimestampDefinition")
-				return
-			}
-		case "tfdefs":
-			var zb0002 uint32
-			zb0002, err = dc.ReadArrayHeader()
-			if err != nil {
-				err = msgp.WrapError(err, "TagFieldDefintions")
-				return
-			}
-			if cap(z.TagFieldDefintions) >= int(zb0002) {
-				z.TagFieldDefintions = (z.TagFieldDefintions)[:zb0002]
-			} else {
-				z.TagFieldDefintions = make([]FieldDefinition, zb0002)
-			}
-			for za0001 := range z.TagFieldDefintions {
-				err = z.TagFieldDefintions[za0001].DecodeMsg(dc)
-				if err != nil {
-					err = msgp.WrapError(err, "TagFieldDefintions", za0001)
-					return
-				}
-			}
-		case "vfdefs":
-			var zb0003 uint32
-			zb0003, err = dc.ReadArrayHeader()
-			if err != nil {
-				err = msgp.WrapError(err, "ValueFieldDefinitions")
-				return
-			}
-			if cap(z.ValueFieldDefinitions) >= int(zb0003) {
-				z.ValueFieldDefinitions = (z.ValueFieldDefinitions)[:zb0003]
-			} else {
-				z.ValueFieldDefinitions = make([]FieldDefinition, zb0003)
-			}
-			for za0002 := range z.ValueFieldDefinitions {
-				err = z.ValueFieldDefinitions[za0002].DecodeMsg(dc)
-				if err != nil {
-					err = msgp.WrapError(err, "ValueFieldDefinitions", za0002)
-					return
-				}
-			}
 		case "cke":
-			var zb0004 uint32
-			zb0004, err = dc.ReadMapHeader()
+			var zb0002 uint32
+			zb0002, err = dc.ReadMapHeader()
 			if err != nil {
 				err = msgp.WrapError(err, "CacheKeyElements")
 				return
 			}
 			if z.CacheKeyElements == nil {
-				z.CacheKeyElements = make(map[string]string, zb0004)
+				z.CacheKeyElements = make(map[string]string, zb0002)
 			} else if len(z.CacheKeyElements) > 0 {
 				for key := range z.CacheKeyElements {
 					delete(z.CacheKeyElements, key)
 				}
 			}
-			for zb0004 > 0 {
-				zb0004--
-				var za0003 string
-				var za0004 string
-				za0003, err = dc.ReadString()
+			for zb0002 > 0 {
+				zb0002--
+				var za0001 string
+				var za0002 string
+				za0001, err = dc.ReadString()
 				if err != nil {
 					err = msgp.WrapError(err, "CacheKeyElements")
 					return
 				}
-				za0004, err = dc.ReadString()
+				za0002, err = dc.ReadString()
 				if err != nil {
-					err = msgp.WrapError(err, "CacheKeyElements", za0003)
+					err = msgp.WrapError(err, "CacheKeyElements", za0001)
 					return
 				}
-				z.CacheKeyElements[za0003] = za0004
+				z.CacheKeyElements[za0001] = za0002
 			}
 		default:
 			err = dc.Skip()
@@ -151,9 +107,9 @@ func (z *TimeRangeQuery) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 8
+	// map header, size 5
 	// write "stmt"
-	err = en.Append(0x88, 0xa4, 0x73, 0x74, 0x6d, 0x74)
+	err = en.Append(0x85, 0xa4, 0x73, 0x74, 0x6d, 0x74)
 	if err != nil {
 		return
 	}
@@ -192,50 +148,6 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "RecordLimit")
 		return
 	}
-	// write "tsdef"
-	err = en.Append(0xa5, 0x74, 0x73, 0x64, 0x65, 0x66)
-	if err != nil {
-		return
-	}
-	err = z.TimestampDefinition.EncodeMsg(en)
-	if err != nil {
-		err = msgp.WrapError(err, "TimestampDefinition")
-		return
-	}
-	// write "tfdefs"
-	err = en.Append(0xa6, 0x74, 0x66, 0x64, 0x65, 0x66, 0x73)
-	if err != nil {
-		return
-	}
-	err = en.WriteArrayHeader(uint32(len(z.TagFieldDefintions)))
-	if err != nil {
-		err = msgp.WrapError(err, "TagFieldDefintions")
-		return
-	}
-	for za0001 := range z.TagFieldDefintions {
-		err = z.TagFieldDefintions[za0001].EncodeMsg(en)
-		if err != nil {
-			err = msgp.WrapError(err, "TagFieldDefintions", za0001)
-			return
-		}
-	}
-	// write "vfdefs"
-	err = en.Append(0xa6, 0x76, 0x66, 0x64, 0x65, 0x66, 0x73)
-	if err != nil {
-		return
-	}
-	err = en.WriteArrayHeader(uint32(len(z.ValueFieldDefinitions)))
-	if err != nil {
-		err = msgp.WrapError(err, "ValueFieldDefinitions")
-		return
-	}
-	for za0002 := range z.ValueFieldDefinitions {
-		err = z.ValueFieldDefinitions[za0002].EncodeMsg(en)
-		if err != nil {
-			err = msgp.WrapError(err, "ValueFieldDefinitions", za0002)
-			return
-		}
-	}
 	// write "cke"
 	err = en.Append(0xa3, 0x63, 0x6b, 0x65)
 	if err != nil {
@@ -246,15 +158,15 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "CacheKeyElements")
 		return
 	}
-	for za0003, za0004 := range z.CacheKeyElements {
-		err = en.WriteString(za0003)
+	for za0001, za0002 := range z.CacheKeyElements {
+		err = en.WriteString(za0001)
 		if err != nil {
 			err = msgp.WrapError(err, "CacheKeyElements")
 			return
 		}
-		err = en.WriteString(za0004)
+		err = en.WriteString(za0002)
 		if err != nil {
-			err = msgp.WrapError(err, "CacheKeyElements", za0003)
+			err = msgp.WrapError(err, "CacheKeyElements", za0001)
 			return
 		}
 	}
@@ -264,9 +176,9 @@ func (z *TimeRangeQuery) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *TimeRangeQuery) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 8
+	// map header, size 5
 	// string "stmt"
-	o = append(o, 0x88, 0xa4, 0x73, 0x74, 0x6d, 0x74)
+	o = append(o, 0x85, 0xa4, 0x73, 0x74, 0x6d, 0x74)
 	o = msgp.AppendString(o, z.Statement)
 	// string "ex"
 	o = append(o, 0xa2, 0x65, 0x78)
@@ -281,39 +193,12 @@ func (z *TimeRangeQuery) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "rl"
 	o = append(o, 0xa2, 0x72, 0x6c)
 	o = msgp.AppendInt(o, z.RecordLimit)
-	// string "tsdef"
-	o = append(o, 0xa5, 0x74, 0x73, 0x64, 0x65, 0x66)
-	o, err = z.TimestampDefinition.MarshalMsg(o)
-	if err != nil {
-		err = msgp.WrapError(err, "TimestampDefinition")
-		return
-	}
-	// string "tfdefs"
-	o = append(o, 0xa6, 0x74, 0x66, 0x64, 0x65, 0x66, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.TagFieldDefintions)))
-	for za0001 := range z.TagFieldDefintions {
-		o, err = z.TagFieldDefintions[za0001].MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "TagFieldDefintions", za0001)
-			return
-		}
-	}
-	// string "vfdefs"
-	o = append(o, 0xa6, 0x76, 0x66, 0x64, 0x65, 0x66, 0x73)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.ValueFieldDefinitions)))
-	for za0002 := range z.ValueFieldDefinitions {
-		o, err = z.ValueFieldDefinitions[za0002].MarshalMsg(o)
-		if err != nil {
-			err = msgp.WrapError(err, "ValueFieldDefinitions", za0002)
-			return
-		}
-	}
 	// string "cke"
 	o = append(o, 0xa3, 0x63, 0x6b, 0x65)
 	o = msgp.AppendMapHeader(o, uint32(len(z.CacheKeyElements)))
-	for za0003, za0004 := range z.CacheKeyElements {
-		o = msgp.AppendString(o, za0003)
-		o = msgp.AppendString(o, za0004)
+	for za0001, za0002 := range z.CacheKeyElements {
+		o = msgp.AppendString(o, za0001)
+		o = msgp.AppendString(o, za0002)
 	}
 	return
 }
@@ -360,79 +245,35 @@ func (z *TimeRangeQuery) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "RecordLimit")
 				return
 			}
-		case "tsdef":
-			bts, err = z.TimestampDefinition.UnmarshalMsg(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "TimestampDefinition")
-				return
-			}
-		case "tfdefs":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "TagFieldDefintions")
-				return
-			}
-			if cap(z.TagFieldDefintions) >= int(zb0002) {
-				z.TagFieldDefintions = (z.TagFieldDefintions)[:zb0002]
-			} else {
-				z.TagFieldDefintions = make([]FieldDefinition, zb0002)
-			}
-			for za0001 := range z.TagFieldDefintions {
-				bts, err = z.TagFieldDefintions[za0001].UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "TagFieldDefintions", za0001)
-					return
-				}
-			}
-		case "vfdefs":
-			var zb0003 uint32
-			zb0003, bts, err = msgp.ReadArrayHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ValueFieldDefinitions")
-				return
-			}
-			if cap(z.ValueFieldDefinitions) >= int(zb0003) {
-				z.ValueFieldDefinitions = (z.ValueFieldDefinitions)[:zb0003]
-			} else {
-				z.ValueFieldDefinitions = make([]FieldDefinition, zb0003)
-			}
-			for za0002 := range z.ValueFieldDefinitions {
-				bts, err = z.ValueFieldDefinitions[za0002].UnmarshalMsg(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "ValueFieldDefinitions", za0002)
-					return
-				}
-			}
 		case "cke":
-			var zb0004 uint32
-			zb0004, bts, err = msgp.ReadMapHeaderBytes(bts)
+			var zb0002 uint32
+			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "CacheKeyElements")
 				return
 			}
 			if z.CacheKeyElements == nil {
-				z.CacheKeyElements = make(map[string]string, zb0004)
+				z.CacheKeyElements = make(map[string]string, zb0002)
 			} else if len(z.CacheKeyElements) > 0 {
 				for key := range z.CacheKeyElements {
 					delete(z.CacheKeyElements, key)
 				}
 			}
-			for zb0004 > 0 {
-				var za0003 string
-				var za0004 string
-				zb0004--
-				za0003, bts, err = msgp.ReadStringBytes(bts)
+			for zb0002 > 0 {
+				var za0001 string
+				var za0002 string
+				zb0002--
+				za0001, bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "CacheKeyElements")
 					return
 				}
-				za0004, bts, err = msgp.ReadStringBytes(bts)
+				za0002, bts, err = msgp.ReadStringBytes(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "CacheKeyElements", za0003)
+					err = msgp.WrapError(err, "CacheKeyElements", za0001)
 					return
 				}
-				z.CacheKeyElements[za0003] = za0004
+				z.CacheKeyElements[za0001] = za0002
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -448,19 +289,11 @@ func (z *TimeRangeQuery) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *TimeRangeQuery) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Statement) + 3 + z.Extent.Msgsize() + 5 + msgp.Int64Size + 3 + msgp.IntSize + 6 + z.TimestampDefinition.Msgsize() + 7 + msgp.ArrayHeaderSize
-	for za0001 := range z.TagFieldDefintions {
-		s += z.TagFieldDefintions[za0001].Msgsize()
-	}
-	s += 7 + msgp.ArrayHeaderSize
-	for za0002 := range z.ValueFieldDefinitions {
-		s += z.ValueFieldDefinitions[za0002].Msgsize()
-	}
-	s += 4 + msgp.MapHeaderSize
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Statement) + 3 + z.Extent.Msgsize() + 5 + msgp.Int64Size + 3 + msgp.IntSize + 4 + msgp.MapHeaderSize
 	if z.CacheKeyElements != nil {
-		for za0003, za0004 := range z.CacheKeyElements {
-			_ = za0004
-			s += msgp.StringPrefixSize + len(za0003) + msgp.StringPrefixSize + len(za0004)
+		for za0001, za0002 := range z.CacheKeyElements {
+			_ = za0002
+			s += msgp.StringPrefixSize + len(za0001) + msgp.StringPrefixSize + len(za0002)
 		}
 	}
 	return
