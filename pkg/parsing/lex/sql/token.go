@@ -58,6 +58,14 @@ const (
 )
 
 const (
+	TimeFormatSQL         = 1
+	TimeFormatUnixSecs    = 2
+	TimeFormatUnixMilli   = 3
+	TimeFormatUnixNano    = 4
+	TimeFormatUnsupported = 255
+)
+
+const (
 	// TokenSQLNonKeyword is the lower bound value for SQL non-Keyword tokens, and must not be
 	// assigned to a Token.Typ
 	TokenSQLNonKeyword token.Typ = iota + (token.CustomNonKeyword + 128)
@@ -187,20 +195,23 @@ func TokenToTime(i *token.Token) (time.Time, byte, error) {
 	case token.String:
 		t, err = ParseBasicDateTime(UnQuote(i.Val))
 		if err != nil {
-			return t, 0, err
+			return t, TimeFormatSQL, err
 		}
 	case token.Number:
 		n, err := i.Int64()
 		if err != nil {
 			return t, 0, err
 		}
-		if n > 9999999999 {
-			return time.Unix(n/1000, (n%1000)*1000000), 1, nil
+		if n > 999999999999999999 {
+			return time.Unix(0, n), TimeFormatUnixNano, nil
 		}
-		return time.Unix(n, 0), 0, nil
+		if n > 9999999999 {
+			return time.Unix(n/1000, (n%1000)*1000000), TimeFormatUnixMilli, nil
+		}
+		return time.Unix(n, 0), TimeFormatUnixSecs, nil
 
 	default:
 		t = time.Now()
 	}
-	return t, 0, err
+	return t, TimeFormatUnsupported, err
 }
