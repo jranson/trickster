@@ -358,7 +358,6 @@ func parseSelectTokens(results ts.Lookup,
 							return t, ErrUnsupportedOutputFormat
 						}
 						ro.TimeFormat = b
-						trq.TimestampDefinition.ProviderData1 = int(b)
 						checkMultiplier = false
 					}
 				}
@@ -587,7 +586,7 @@ func parseWhereTokens(results ts.Lookup,
 				if err != nil {
 					return t, err
 				}
-				trq.TimestampDefinition.ProviderData2 = int(f)
+				trq.TimestampDefinition.DataType = f
 				_, j, _ := SolveMathExpression(fieldParts[i:], ts, withVars)
 				if atLowerBound {
 					// e.Start = time.Unix(v, 0)
@@ -661,15 +660,22 @@ func parseWhereTokens(results ts.Lookup,
 	return nil, nil
 }
 
-func parseTimeField(t *token.Token) (int64, byte, error) {
+func parseTimeField(t *token.Token) (int64, timeseries.FieldDataType, error) {
 	ts, format, err := lsql.TokenToTime(t)
 	if err != nil {
 		return -1, 255, err
 	}
-	if format == 1 {
-		return ts.UnixNano() / 1000000, format, nil
+	switch format {
+	case lsql.TimeFormatUnixMilli:
+		return ts.UnixNano() / 1000000, timeseries.DateTimeUnixMilli, nil
+	case lsql.TimeFormatUnixNano:
+		return ts.UnixNano(), timeseries.DateTimeUnixNano, nil
+	case lsql.TimeFormatUnixSecs:
+		return ts.UnixNano(), timeseries.DateTimeUnixSecs, nil
+	case lsql.TimeFormatSQL:
+		return ts.Unix(), timeseries.DateTimeSQL, nil
 	}
-	return ts.Unix(), format, nil
+	return ts.Unix(), timeseries.Unknown, nil
 }
 
 func parseGroupByTokens(results ts.Lookup,

@@ -16,6 +16,14 @@
 
 package epoch
 
+import (
+	"strconv"
+	"time"
+
+	lsql "github.com/trickstercache/trickster/v2/pkg/parsing/lex/sql"
+	"github.com/trickstercache/trickster/v2/pkg/timeseries"
+)
+
 //go:generate go tool msgp
 
 // Epoch represents an Epoch timestamp in Nanoseconds and has possible values
@@ -24,3 +32,25 @@ type Epoch int64
 
 // Epochs is a slice of type Epoch
 type Epochs []Epoch
+
+const BillionNS Epoch = 1000000000
+const MillionNS Epoch = 1000000
+
+// Format returns the epoch as a string in the specified format
+func (e Epoch) Format(to timeseries.FieldDataType) string {
+	switch to {
+	case timeseries.DateTimeUnixSecs:
+		return strconv.FormatInt(int64(e/BillionNS), 10)
+	case timeseries.DateTimeUnixMilli:
+		return strconv.FormatInt(int64(e/MillionNS), 10)
+	case timeseries.DateTimeUnixNano:
+		return strconv.FormatInt(int64(e), 10)
+	case timeseries.DateTimeSQL:
+		return "'" + time.Unix(0, int64(e)).UTC().Format(lsql.SQLDateTimeFormat) + "'"
+	case timeseries.DateSQL:
+		return "'" + time.Unix(0, int64(e)).UTC().Format(lsql.SQLDateFormat) + "'"
+	case timeseries.TimeSQL:
+		return "'" + time.Unix(0, int64(e)).UTC().Format(lsql.SQLTimeFormat) + "'"
+	}
+	return "0"
+}

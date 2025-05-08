@@ -255,7 +255,7 @@ func marshalTimeseriesXSV(ds *dataset.DataSet, rlo *timeseries.RequestOptions,
 		for _, p := range s.Points {
 			rowVals := make([]string, fieldCount)
 			fd := trq.TimestampDefinition
-			rowVals[fd.OutputPosition] = sqlparser.FormatOutputTime(p.Epoch, byte(fd.DataType))
+			rowVals[fd.OutputPosition] = p.Epoch.Format(fd.DataType)
 			for _, fd = range trq.TagFieldDefintions {
 				if fd.Name == trq.TimestampDefinition.Name {
 					continue
@@ -566,7 +566,7 @@ func toWireFormat(ds *dataset.DataSet) (*WFDocument, error) {
 			}
 			item[tsfd.OutputPosition] = WFDataItemElement{
 				Key:   d.Meta[tsfd.OutputPosition].Name,
-				Value: sqlparser.FormatOutputTime(p.Epoch, byte(tsfd.DataType)),
+				Value: p.Epoch.Format(tsfd.DataType),
 			}
 
 			for _, fd := range trq.TagFieldDefintions {
