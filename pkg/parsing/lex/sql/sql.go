@@ -31,6 +31,15 @@ type sqllexer struct {
 	SpacedKeywordHints map[string]int
 }
 
+// SQLDateFormat is the go-formatted date representation of a SQL Basic Date
+const SQLDateFormat = "2006-01-02"
+
+// SQLTimeFormat is the go-formatted date representation of a SQL Basic Date
+const SQLTimeFormat = "15:04:05"
+
+// SQLDateTimeFormat is the go-formatted date representation of a SQL Basic DateTime
+const SQLDateTimeFormat = SQLDateFormat + " " + SQLTimeFormat
+
 // NewLexer returns a new SQL Lexer reference
 func NewLexer(lo *lex.Options) lex.Lexer {
 	l := &sqllexer{
@@ -423,16 +432,13 @@ Loop:
 	return lexText
 }
 
-// BasicDateFormat is the go-formatted date representation of a SQL Basic Date
-const BasicDateFormat = "2006-01-02 15:04:05"
-
 // ParseBasicDateTime parses a basic sql date time in the format of
 // YYYY-MM-DD HH:MM:SS
 func ParseBasicDateTime(input string) (time.Time, error) {
 	if len(input) != 19 {
 		return time.Time{}, ErrInvalidInputLength
 	}
-	return time.Parse(BasicDateFormat, input)
+	return time.Parse(SQLDateTimeFormat, input)
 }
 
 // UnQuote removes the single quotes surrounding a string, but only if both are present
