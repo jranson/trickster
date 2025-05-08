@@ -36,6 +36,12 @@ const (
 	Uint64
 	DateTimeRFC3339
 	DateTimeRFC3339Nano
+	DateTimeUnixSecs
+	DateTimeUnixMilli
+	DateTimeUnixNano
+	DateSQL
+	TimeSQL
+	DateTimeSQL
 	Null
 )
 
@@ -49,9 +55,6 @@ type FieldDefinition struct {
 	DataType       FieldDataType `msg:"type" json:"type"`
 	OutputPosition int           `msg:"pos" json:"pos,omitempty"`
 	SDataType      string        `msg:"stype" json:"stype,omitempty"`
-	// Fields reserved for Provider use
-	ProviderData1 int `msg:"provider1" json:"provider1,omitempty"`
-	ProviderData2 int `msg:"provider2" json:"provider2,omitempty"`
 }
 
 // FieldDefinitions represents a list type FieldDefinition
@@ -62,6 +65,7 @@ type SeriesFields struct {
 	Timestamp     FieldDefinition
 	Tags          FieldDefinitions
 	Values        FieldDefinitions
+	Misc          FieldDefinitions
 	ResultNameCol int
 }
 
