@@ -41,8 +41,11 @@ type SeriesHeader struct {
 	// TagFieldsList is the ordered list of tag-based Field Definitions in the
 	// Series. Optional and used by some providers. TODO: use by more/all TSDB providers
 	TagFieldsList timeseries.FieldDefinitions `msg:"tagFields"`
-	// FieldsList is the ordered list of value-based Field Definitions in the Series.
-	ValueFieldsList timeseries.FieldDefinitions `msg:"fields"`
+	// ValueFieldsList is the ordered list of value-based Field Definitions in the Series.
+	ValueFieldsList timeseries.FieldDefinitions `msg:"valueFields"`
+	// MiscFieldsList is the ordered list of miscellaneous Field Definitions in the Series.
+	// Optional and used by some providers. TODO: use by more/all TSDB providers
+	MiscFieldsList timeseries.FieldDefinitions `msg:"miscFields"`
 	// QueryStatement is the original query to which this DataSet is associated
 	QueryStatement string `msg:"query"`
 	// Size is the memory utilization of the Header in bytes
@@ -52,8 +55,8 @@ type SeriesHeader struct {
 }
 
 // CalculateHash sums the FNV64a hash for the Header and stores it to the Hash member
-func (sh *SeriesHeader) CalculateHash() Hash {
-	if sh.hash > 0 {
+func (sh *SeriesHeader) CalculateHash(rehash ...bool) Hash {
+	if (len(rehash) == 0 || !rehash[0]) || sh.hash > 0 {
 		return sh.hash
 	}
 	hash := fnv.NewInlineFNV64a()
@@ -67,14 +70,12 @@ func (sh *SeriesHeader) CalculateHash() Hash {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
-	for _, fd := range sh.TagFieldsList {
+	for _, fd := range sh.MiscFieldsList {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
-	if sh.TimestampField.DataType != timeseries.Unknown {
-		hash.Write([]byte(sh.TimestampField.Name))
-		hash.Write([]byte{byte(sh.TimestampField.DataType)})
-	}
+	hash.Write([]byte(sh.TimestampField.Name))
+	hash.Write([]byte{byte(sh.TimestampField.DataType)})
 	sh.hash = Hash(hash.Sum64())
 	return sh.hash
 }

@@ -64,10 +64,16 @@ func (z *SeriesHeader) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "TagFieldsList")
 				return
 			}
-		case "fields":
+		case "valueFields":
 			err = z.ValueFieldsList.DecodeMsg(dc)
 			if err != nil {
 				err = msgp.WrapError(err, "ValueFieldsList")
+				return
+			}
+		case "miscFields":
+			err = z.MiscFieldsList.DecodeMsg(dc)
+			if err != nil {
+				err = msgp.WrapError(err, "MiscFieldsList")
 				return
 			}
 		case "query":
@@ -95,9 +101,9 @@ func (z *SeriesHeader) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 7
+	// map header, size 8
 	// write "name"
-	err = en.Append(0x87, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	err = en.Append(0x88, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	if err != nil {
 		return
 	}
@@ -136,14 +142,24 @@ func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
 		err = msgp.WrapError(err, "TagFieldsList")
 		return
 	}
-	// write "fields"
-	err = en.Append(0xa6, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73)
+	// write "valueFields"
+	err = en.Append(0xab, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
 	if err != nil {
 		return
 	}
 	err = z.ValueFieldsList.EncodeMsg(en)
 	if err != nil {
 		err = msgp.WrapError(err, "ValueFieldsList")
+		return
+	}
+	// write "miscFields"
+	err = en.Append(0xaa, 0x6d, 0x69, 0x73, 0x63, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
+	if err != nil {
+		return
+	}
+	err = z.MiscFieldsList.EncodeMsg(en)
+	if err != nil {
+		err = msgp.WrapError(err, "MiscFieldsList")
 		return
 	}
 	// write "query"
@@ -172,9 +188,9 @@ func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *SeriesHeader) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 7
+	// map header, size 8
 	// string "name"
-	o = append(o, 0x87, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	o = append(o, 0x88, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	o = msgp.AppendString(o, z.Name)
 	// string "tags"
 	o = append(o, 0xa4, 0x74, 0x61, 0x67, 0x73)
@@ -197,11 +213,18 @@ func (z *SeriesHeader) MarshalMsg(b []byte) (o []byte, err error) {
 		err = msgp.WrapError(err, "TagFieldsList")
 		return
 	}
-	// string "fields"
-	o = append(o, 0xa6, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73)
+	// string "valueFields"
+	o = append(o, 0xab, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
 	o, err = z.ValueFieldsList.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "ValueFieldsList")
+		return
+	}
+	// string "miscFields"
+	o = append(o, 0xaa, 0x6d, 0x69, 0x73, 0x63, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x73)
+	o, err = z.MiscFieldsList.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "MiscFieldsList")
 		return
 	}
 	// string "query"
@@ -255,10 +278,16 @@ func (z *SeriesHeader) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "TagFieldsList")
 				return
 			}
-		case "fields":
+		case "valueFields":
 			bts, err = z.ValueFieldsList.UnmarshalMsg(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "ValueFieldsList")
+				return
+			}
+		case "miscFields":
+			bts, err = z.MiscFieldsList.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MiscFieldsList")
 				return
 			}
 		case "query":
@@ -287,6 +316,6 @@ func (z *SeriesHeader) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SeriesHeader) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + z.Tags.Msgsize() + 15 + z.TimestampField.Msgsize() + 10 + z.TagFieldsList.Msgsize() + 7 + z.ValueFieldsList.Msgsize() + 6 + msgp.StringPrefixSize + len(z.QueryStatement) + 5 + msgp.IntSize
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + z.Tags.Msgsize() + 15 + z.TimestampField.Msgsize() + 10 + z.TagFieldsList.Msgsize() + 12 + z.ValueFieldsList.Msgsize() + 11 + z.MiscFieldsList.Msgsize() + 6 + msgp.StringPrefixSize + len(z.QueryStatement) + 5 + msgp.IntSize
 	return
 }
