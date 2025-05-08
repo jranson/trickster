@@ -87,6 +87,7 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 		Tags:            sh.Tags.Clone(),
 		ValueFieldsList: make([]timeseries.FieldDefinition, len(sh.ValueFieldsList)),
 		TagFieldsList:   make([]timeseries.FieldDefinition, len(sh.TagFieldsList)),
+		MiscFieldsList:  make([]timeseries.FieldDefinition, len(sh.MiscFieldsList)),
 		TimestampField:  sh.TimestampField,
 		QueryStatement:  sh.QueryStatement,
 		Size:            sh.Size,
@@ -94,6 +95,7 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 	}
 	copy(clone.ValueFieldsList, sh.ValueFieldsList)
 	copy(clone.TagFieldsList, sh.TagFieldsList)
+	copy(clone.MiscFieldsList, sh.MiscFieldsList)
 	return clone
 }
 
@@ -107,6 +109,9 @@ func (sh *SeriesHeader) CalculateSize() int {
 	}
 	for i := range sh.TagFieldsList {
 		c += sh.TagFieldsList[i].Size()
+	}
+	for i := range sh.MiscFieldsList {
+		c += sh.MiscFieldsList[i].Size()
 	}
 	sh.Size = c
 	return c
@@ -125,7 +130,7 @@ func (sh *SeriesHeader) String() string {
 		fmt.Fprintf(sb, `"tags":"%s",`, sh.Tags.String())
 	}
 	if len(sh.ValueFieldsList) > 0 {
-		sb.WriteString(`"fields":[`)
+		sb.WriteString(`"valueFields":[`)
 		l := len(sh.ValueFieldsList)
 		for i, fd := range sh.ValueFieldsList {
 			fmt.Fprintf(sb, `"%s"`, fd.Name)
@@ -136,9 +141,20 @@ func (sh *SeriesHeader) String() string {
 		sb.WriteString("],")
 	}
 	if len(sh.TagFieldsList) > 0 {
-		sb.WriteString(`"tagsList":[`)
+		sb.WriteString(`"tagFields":[`)
 		l := len(sh.TagFieldsList)
 		for i, fd := range sh.TagFieldsList {
+			fmt.Fprintf(sb, `"%s"`, fd.Name)
+			if i < l-1 {
+				sb.WriteByte(',')
+			}
+		}
+		sb.WriteString("],")
+	}
+	if len(sh.MiscFieldsList) > 0 {
+		sb.WriteString(`"miscFields":[`)
+		l := len(sh.MiscFieldsList)
+		for i, fd := range sh.MiscFieldsList {
 			fmt.Fprintf(sb, `"%s"`, fd.Name)
 			if i < l-1 {
 				sb.WriteByte(',')
