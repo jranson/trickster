@@ -21,11 +21,13 @@
 package dataset
 
 import (
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries/epoch"
+	"github.com/trickstercache/trickster/v2/pkg/util/sets"
 )
 
 // DataSet is the Common Time Series Format that Trickster uses to
@@ -505,4 +507,45 @@ func (ds *DataSet) VolatileExtents() timeseries.ExtentList {
 // SetVolatileExtents sets the list of time Extents in the dataset that should be re-fetched
 func (ds *DataSet) SetVolatileExtents(e timeseries.ExtentList) {
 	ds.VolatileExtentList = e
+}
+
+// FieldDefinitions returns a de-duped slice of Field Definitions from all
+// series in the DataSet, including the TimeStamp, Tags, and Values.
+func (ds *DataSet) FieldDefinitions() timeseries.FieldDefinitions {
+	used := sets.NewStringSet()
+	out := make(timeseries.FieldDefinitions, 0, 32)
+	for _, r := range ds.Results {
+		for _, s := range r.SeriesList {
+			if used.Contains(s.Header.TimestampField.Name) {
+				continue
+			}
+			out = append(out, s.Header.TimestampField)
+			used.Add(s.Header.TimestampField.Name)
+			for _, fd := range s.Header.TagFieldsList {
+				if used.Contains(fd.Name) {
+					continue
+				}
+				out = append(out, fd)
+				used.Add(fd.Name)
+			}
+			for _, fd := range s.Header.ValueFieldsList {
+				if used.Contains(fd.Name) {
+					continue
+				}
+				out = append(out, fd)
+				used.Add(fd.Name)
+			}
+			for _, fd := range s.Header.MiscFieldsList {
+				if used.Contains(fd.Name) {
+					continue
+				}
+				out = append(out, fd)
+				used.Add(fd.Name)
+			}
+		}
+	}
+	slices.SortFunc(out, func(a, b timeseries.FieldDefinition) int {
+		return a.OutputPosition - b.OutputPosition
+	})
+	return out
 }
