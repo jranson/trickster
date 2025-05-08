@@ -24,18 +24,18 @@ import "github.com/trickstercache/trickster/v2/pkg/util/numbers"
 type CounterSet[T comparable] map[T]int
 
 // Increment increments the CounterSet value for 'key' by 'cnt' and returns the
-// new CounterSet value. The bool returns true only if the key was pre-existing.
+// old and new value. The bool returns true if the key was pre-existing.
 // Negative cnt values are ok. Increment is not safe for concurrency.
-func (s CounterSet[T]) Increment(key T, cnt int) (int, bool) {
+func (s CounterSet[T]) Increment(key T, cnt int) (int, int, bool) {
 	if i, ok := s[key]; ok {
 		if j, ok := numbers.SafeAdd(i, cnt); ok {
 			s[key] = j
-			return j, true
+			return i, j, true
 		}
-		return i, true
+		return i, i, true
 	}
 	s[key] = cnt
-	return cnt, false
+	return 0, cnt, false
 }
 
 // Reset resets the CounterSet value for 'key' to 0. If the key is not present
