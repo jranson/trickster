@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/trickstercache/trickster/v2/pkg/parsing/token"
+	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 )
 
 // tokens for SELECT query
@@ -214,4 +215,22 @@ func TokenToTime(i *token.Token) (time.Time, byte, error) {
 		t = time.Now()
 	}
 	return t, TimeFormatUnsupported, err
+}
+
+func ParseTimeField(t *token.Token) (int64, timeseries.FieldDataType, error) {
+	ts, format, err := TokenToTime(t)
+	if err != nil {
+		return -1, 255, err
+	}
+	switch format {
+	case TimeFormatUnixMilli:
+		return ts.UnixNano() / 1000000, timeseries.DateTimeUnixMilli, nil
+	case TimeFormatUnixNano:
+		return ts.UnixNano(), timeseries.DateTimeUnixNano, nil
+	case TimeFormatUnixSecs:
+		return ts.UnixNano(), timeseries.DateTimeUnixSecs, nil
+	case TimeFormatSQL:
+		return ts.Unix(), timeseries.DateTimeSQL, nil
+	}
+	return ts.Unix(), timeseries.Unknown, nil
 }

@@ -582,7 +582,7 @@ func parseWhereTokens(results ts.Lookup,
 					t.Typ == token.GreaterThanOrEqual)
 				state++
 			case 2: // gets the first time and runs it through the evaluator
-				ts, f, err := parseTimeField(t)
+				ts, f, err := lsql.ParseTimeField(t)
 				if err != nil {
 					return t, err
 				}
@@ -614,7 +614,7 @@ func parseWhereTokens(results ts.Lookup,
 					break sw
 				}
 				// therefore, if we make it to here, it MUST be a BETWEEN
-				ts, _, err := parseTimeField(t)
+				ts, _, err := lsql.ParseTimeField(t)
 				if err != nil {
 					return t, err
 				}
@@ -658,24 +658,6 @@ func parseWhereTokens(results ts.Lookup,
 		trq.Statement = strings.ReplaceAll(trq.Statement, tsr2, tkTS2)
 	}
 	return nil, nil
-}
-
-func parseTimeField(t *token.Token) (int64, timeseries.FieldDataType, error) {
-	ts, format, err := lsql.TokenToTime(t)
-	if err != nil {
-		return -1, 255, err
-	}
-	switch format {
-	case lsql.TimeFormatUnixMilli:
-		return ts.UnixNano() / 1000000, timeseries.DateTimeUnixMilli, nil
-	case lsql.TimeFormatUnixNano:
-		return ts.UnixNano(), timeseries.DateTimeUnixNano, nil
-	case lsql.TimeFormatUnixSecs:
-		return ts.UnixNano(), timeseries.DateTimeUnixSecs, nil
-	case lsql.TimeFormatSQL:
-		return ts.Unix(), timeseries.DateTimeSQL, nil
-	}
-	return ts.Unix(), timeseries.Unknown, nil
 }
 
 func parseGroupByTokens(results ts.Lookup,
