@@ -35,6 +35,10 @@ type SeriesHeader struct {
 	// a fd.Name in TagFieldsList, with values representing the specific tag
 	// values for this Series.
 	Tags Tags `msg:"tags"`
+	// Misc is the map of misc data associated with the Series. Each key will map to
+	// a fd.Name in MiscFieldsList, with values representing the specific values
+	// for this Series.
+	Misc Tags `msg:"misc"`
 	// TimestampField is the Field Definitions for the timestamp field.
 	// Optional and used by some providers. TODO: use by more/all TSDB providers
 	TimestampField timeseries.FieldDefinition `msg:"timestampField"`
@@ -66,11 +70,11 @@ func (sh *SeriesHeader) CalculateHash(rehash ...bool) Hash {
 		hash.Write([]byte(k))
 		hash.Write([]byte(sh.Tags[k]))
 	}
-	for _, fd := range sh.ValueFieldsList {
-		hash.Write([]byte(fd.Name))
-		hash.Write([]byte{byte(fd.DataType)})
+	for _, k := range sh.Misc.Keys() {
+		hash.Write([]byte(k))
+		hash.Write([]byte(sh.Misc[k]))
 	}
-	for _, fd := range sh.MiscFieldsList {
+	for _, fd := range sh.ValueFieldsList {
 		hash.Write([]byte(fd.Name))
 		hash.Write([]byte{byte(fd.DataType)})
 	}
@@ -85,6 +89,7 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 	clone := SeriesHeader{
 		Name:            sh.Name,
 		Tags:            sh.Tags.Clone(),
+		Misc:            sh.Misc.Clone(),
 		ValueFieldsList: make([]timeseries.FieldDefinition, len(sh.ValueFieldsList)),
 		TagFieldsList:   make([]timeseries.FieldDefinition, len(sh.TagFieldsList)),
 		MiscFieldsList:  make([]timeseries.FieldDefinition, len(sh.MiscFieldsList)),
@@ -103,7 +108,7 @@ func (sh *SeriesHeader) Clone() SeriesHeader {
 func (sh *SeriesHeader) CalculateSize() int {
 	// 16 is the string header size on 64-bit arch, while 8 is for sh.Size
 	c := len(sh.Name) + 16 + sh.Tags.Size() + len(sh.QueryStatement) + 16 +
-		sh.TimestampField.Size() + 8
+		sh.TimestampField.Size() + 8 + sh.Misc.Size()
 	for i := range sh.ValueFieldsList {
 		c += sh.ValueFieldsList[i].Size()
 	}
@@ -128,6 +133,9 @@ func (sh *SeriesHeader) String() string {
 	}
 	if len(sh.Tags) > 0 {
 		fmt.Fprintf(sb, `"tags":"%s",`, sh.Tags.String())
+	}
+	if len(sh.Misc) > 0 {
+		fmt.Fprintf(sb, `"misc":"%s",`, sh.Misc.String())
 	}
 	if len(sh.ValueFieldsList) > 0 {
 		sb.WriteString(`"valueFields":[`)

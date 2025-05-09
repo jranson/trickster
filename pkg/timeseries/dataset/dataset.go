@@ -27,6 +27,7 @@ import (
 
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries/epoch"
+	"github.com/trickstercache/trickster/v2/pkg/util/numbers"
 	"github.com/trickstercache/trickster/v2/pkg/util/sets"
 )
 
@@ -511,41 +512,63 @@ func (ds *DataSet) SetVolatileExtents(e timeseries.ExtentList) {
 
 // FieldDefinitions returns a de-duped slice of Field Definitions from all
 // series in the DataSet, including the TimeStamp, Tags, and Values.
-func (ds *DataSet) FieldDefinitions() timeseries.FieldDefinitions {
+func (ds *DataSet) FieldDefinitions() (timeseries.FieldDefinitions,
+	timeseries.FieldDefinitions, timeseries.FieldDefinitions,
+	timeseries.FieldDefinitions, timeseries.FieldDefinition) {
 	used := sets.NewStringSet()
-	out := make(timeseries.FieldDefinitions, 0, 32)
+	all := make(timeseries.FieldDefinitions, 0, 32)
+	tags := make(timeseries.FieldDefinitions, 0, 32)
+	vals := make(timeseries.FieldDefinitions, 0, 32)
+	misc := make(timeseries.FieldDefinitions, 0, 32)
+	var tfd timeseries.FieldDefinition
 	for _, r := range ds.Results {
 		for _, s := range r.SeriesList {
-			if used.Contains(s.Header.TimestampField.Name) {
-				continue
+			if !used.Contains(s.Header.TimestampField.Name) {
+				all = append(all, s.Header.TimestampField)
+				tfd = s.Header.TimestampField
+				used.Add(s.Header.TimestampField.Name)
 			}
-			out = append(out, s.Header.TimestampField)
-			used.Add(s.Header.TimestampField.Name)
 			for _, fd := range s.Header.TagFieldsList {
 				if used.Contains(fd.Name) {
 					continue
 				}
-				out = append(out, fd)
+				all = append(all, fd)
+				tags = append(tags, fd)
 				used.Add(fd.Name)
 			}
 			for _, fd := range s.Header.ValueFieldsList {
 				if used.Contains(fd.Name) {
 					continue
 				}
-				out = append(out, fd)
+				all = append(all, fd)
+				vals = append(vals, fd)
 				used.Add(fd.Name)
 			}
 			for _, fd := range s.Header.MiscFieldsList {
 				if used.Contains(fd.Name) {
 					continue
 				}
-				out = append(out, fd)
+				all = append(all, fd)
+				misc = append(misc, fd)
 				used.Add(fd.Name)
 			}
 		}
 	}
-	slices.SortFunc(out, func(a, b timeseries.FieldDefinition) int {
+	slices.SortFunc(all, func(a, b timeseries.FieldDefinition) int {
 		return a.OutputPosition - b.OutputPosition
 	})
+	return all, tags, vals, misc, tfd
+}
+
+// PointCount returns the total number of Points across all Results and Series
+func (ds *DataSet) PointCount() int {
+	var out int
+	for _, r := range ds.Results {
+		for _, s := range r.SeriesList {
+			if x, ok := numbers.SafeAdd(out, len(s.Points)); ok {
+				out = x
+			}
+		}
+	}
 	return out
 }

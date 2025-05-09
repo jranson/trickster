@@ -55,6 +55,7 @@ type FieldDefinition struct {
 	DataType       FieldDataType `msg:"type" json:"type"`
 	OutputPosition int           `msg:"pos" json:"pos,omitempty"`
 	SDataType      string        `msg:"stype" json:"stype,omitempty"`
+	DefaultValue   string        `msg:"dv,omitempty" json:"dv,omitempty"`
 }
 
 // FieldDefinitions represents a list type FieldDefinition

@@ -52,6 +52,12 @@ func (z *SeriesHeader) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "Tags")
 				return
 			}
+		case "misc":
+			err = z.Misc.DecodeMsg(dc)
+			if err != nil {
+				err = msgp.WrapError(err, "Misc")
+				return
+			}
 		case "timestampField":
 			err = z.TimestampField.DecodeMsg(dc)
 			if err != nil {
@@ -101,9 +107,9 @@ func (z *SeriesHeader) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 8
+	// map header, size 9
 	// write "name"
-	err = en.Append(0x88, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	err = en.Append(0x89, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	if err != nil {
 		return
 	}
@@ -120,6 +126,16 @@ func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
 	err = z.Tags.EncodeMsg(en)
 	if err != nil {
 		err = msgp.WrapError(err, "Tags")
+		return
+	}
+	// write "misc"
+	err = en.Append(0xa4, 0x6d, 0x69, 0x73, 0x63)
+	if err != nil {
+		return
+	}
+	err = z.Misc.EncodeMsg(en)
+	if err != nil {
+		err = msgp.WrapError(err, "Misc")
 		return
 	}
 	// write "timestampField"
@@ -188,15 +204,22 @@ func (z *SeriesHeader) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *SeriesHeader) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 8
+	// map header, size 9
 	// string "name"
-	o = append(o, 0x88, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	o = append(o, 0x89, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	o = msgp.AppendString(o, z.Name)
 	// string "tags"
 	o = append(o, 0xa4, 0x74, 0x61, 0x67, 0x73)
 	o, err = z.Tags.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Tags")
+		return
+	}
+	// string "misc"
+	o = append(o, 0xa4, 0x6d, 0x69, 0x73, 0x63)
+	o, err = z.Misc.MarshalMsg(o)
+	if err != nil {
+		err = msgp.WrapError(err, "Misc")
 		return
 	}
 	// string "timestampField"
@@ -266,6 +289,12 @@ func (z *SeriesHeader) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Tags")
 				return
 			}
+		case "misc":
+			bts, err = z.Misc.UnmarshalMsg(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Misc")
+				return
+			}
 		case "timestampField":
 			bts, err = z.TimestampField.UnmarshalMsg(bts)
 			if err != nil {
@@ -316,6 +345,6 @@ func (z *SeriesHeader) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *SeriesHeader) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + z.Tags.Msgsize() + 15 + z.TimestampField.Msgsize() + 10 + z.TagFieldsList.Msgsize() + 12 + z.ValueFieldsList.Msgsize() + 11 + z.MiscFieldsList.Msgsize() + 6 + msgp.StringPrefixSize + len(z.QueryStatement) + 5 + msgp.IntSize
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + z.Tags.Msgsize() + 5 + z.Misc.Msgsize() + 15 + z.TimestampField.Msgsize() + 10 + z.TagFieldsList.Msgsize() + 12 + z.ValueFieldsList.Msgsize() + 11 + z.MiscFieldsList.Msgsize() + 6 + msgp.StringPrefixSize + len(z.QueryStatement) + 5 + msgp.IntSize
 	return
 }

@@ -120,6 +120,12 @@ func (z *FieldDefinition) DecodeMsg(dc *msgp.Reader) (err error) {
 				err = msgp.WrapError(err, "SDataType")
 				return
 			}
+		case "dv":
+			z.DefaultValue, err = dc.ReadString()
+			if err != nil {
+				err = msgp.WrapError(err, "DefaultValue")
+				return
+			}
 		default:
 			err = dc.Skip()
 			if err != nil {
@@ -133,46 +139,74 @@ func (z *FieldDefinition) DecodeMsg(dc *msgp.Reader) (err error) {
 
 // EncodeMsg implements msgp.Encodable
 func (z *FieldDefinition) EncodeMsg(en *msgp.Writer) (err error) {
-	// map header, size 4
-	// write "name"
-	err = en.Append(0x84, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+	// check for omitted fields
+	zb0001Len := uint32(5)
+	var zb0001Mask uint8 /* 5 bits */
+	_ = zb0001Mask
+	if z.DefaultValue == "" {
+		zb0001Len--
+		zb0001Mask |= 0x10
+	}
+	// variable map header, size zb0001Len
+	err = en.Append(0x80 | uint8(zb0001Len))
 	if err != nil {
 		return
 	}
-	err = en.WriteString(z.Name)
-	if err != nil {
-		err = msgp.WrapError(err, "Name")
-		return
-	}
-	// write "type"
-	err = en.Append(0xa4, 0x74, 0x79, 0x70, 0x65)
-	if err != nil {
-		return
-	}
-	err = en.WriteByte(byte(z.DataType))
-	if err != nil {
-		err = msgp.WrapError(err, "DataType")
-		return
-	}
-	// write "pos"
-	err = en.Append(0xa3, 0x70, 0x6f, 0x73)
-	if err != nil {
-		return
-	}
-	err = en.WriteInt(z.OutputPosition)
-	if err != nil {
-		err = msgp.WrapError(err, "OutputPosition")
-		return
-	}
-	// write "stype"
-	err = en.Append(0xa5, 0x73, 0x74, 0x79, 0x70, 0x65)
-	if err != nil {
-		return
-	}
-	err = en.WriteString(z.SDataType)
-	if err != nil {
-		err = msgp.WrapError(err, "SDataType")
-		return
+
+	// skip if no fields are to be emitted
+	if zb0001Len != 0 {
+		// write "name"
+		err = en.Append(0xa4, 0x6e, 0x61, 0x6d, 0x65)
+		if err != nil {
+			return
+		}
+		err = en.WriteString(z.Name)
+		if err != nil {
+			err = msgp.WrapError(err, "Name")
+			return
+		}
+		// write "type"
+		err = en.Append(0xa4, 0x74, 0x79, 0x70, 0x65)
+		if err != nil {
+			return
+		}
+		err = en.WriteByte(byte(z.DataType))
+		if err != nil {
+			err = msgp.WrapError(err, "DataType")
+			return
+		}
+		// write "pos"
+		err = en.Append(0xa3, 0x70, 0x6f, 0x73)
+		if err != nil {
+			return
+		}
+		err = en.WriteInt(z.OutputPosition)
+		if err != nil {
+			err = msgp.WrapError(err, "OutputPosition")
+			return
+		}
+		// write "stype"
+		err = en.Append(0xa5, 0x73, 0x74, 0x79, 0x70, 0x65)
+		if err != nil {
+			return
+		}
+		err = en.WriteString(z.SDataType)
+		if err != nil {
+			err = msgp.WrapError(err, "SDataType")
+			return
+		}
+		if (zb0001Mask & 0x10) == 0 { // if not omitted
+			// write "dv"
+			err = en.Append(0xa2, 0x64, 0x76)
+			if err != nil {
+				return
+			}
+			err = en.WriteString(z.DefaultValue)
+			if err != nil {
+				err = msgp.WrapError(err, "DefaultValue")
+				return
+			}
+		}
 	}
 	return
 }
@@ -180,19 +214,37 @@ func (z *FieldDefinition) EncodeMsg(en *msgp.Writer) (err error) {
 // MarshalMsg implements msgp.Marshaler
 func (z *FieldDefinition) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
-	// string "name"
-	o = append(o, 0x84, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
-	o = msgp.AppendString(o, z.Name)
-	// string "type"
-	o = append(o, 0xa4, 0x74, 0x79, 0x70, 0x65)
-	o = msgp.AppendByte(o, byte(z.DataType))
-	// string "pos"
-	o = append(o, 0xa3, 0x70, 0x6f, 0x73)
-	o = msgp.AppendInt(o, z.OutputPosition)
-	// string "stype"
-	o = append(o, 0xa5, 0x73, 0x74, 0x79, 0x70, 0x65)
-	o = msgp.AppendString(o, z.SDataType)
+	// check for omitted fields
+	zb0001Len := uint32(5)
+	var zb0001Mask uint8 /* 5 bits */
+	_ = zb0001Mask
+	if z.DefaultValue == "" {
+		zb0001Len--
+		zb0001Mask |= 0x10
+	}
+	// variable map header, size zb0001Len
+	o = append(o, 0x80|uint8(zb0001Len))
+
+	// skip if no fields are to be emitted
+	if zb0001Len != 0 {
+		// string "name"
+		o = append(o, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
+		o = msgp.AppendString(o, z.Name)
+		// string "type"
+		o = append(o, 0xa4, 0x74, 0x79, 0x70, 0x65)
+		o = msgp.AppendByte(o, byte(z.DataType))
+		// string "pos"
+		o = append(o, 0xa3, 0x70, 0x6f, 0x73)
+		o = msgp.AppendInt(o, z.OutputPosition)
+		// string "stype"
+		o = append(o, 0xa5, 0x73, 0x74, 0x79, 0x70, 0x65)
+		o = msgp.AppendString(o, z.SDataType)
+		if (zb0001Mask & 0x10) == 0 { // if not omitted
+			// string "dv"
+			o = append(o, 0xa2, 0x64, 0x76)
+			o = msgp.AppendString(o, z.DefaultValue)
+		}
+	}
 	return
 }
 
@@ -242,6 +294,12 @@ func (z *FieldDefinition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "SDataType")
 				return
 			}
+		case "dv":
+			z.DefaultValue, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "DefaultValue")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -256,7 +314,7 @@ func (z *FieldDefinition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *FieldDefinition) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + msgp.ByteSize + 4 + msgp.IntSize + 6 + msgp.StringPrefixSize + len(z.SDataType)
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + msgp.ByteSize + 4 + msgp.IntSize + 6 + msgp.StringPrefixSize + len(z.SDataType) + 3 + msgp.StringPrefixSize + len(z.DefaultValue)
 	return
 }
 
