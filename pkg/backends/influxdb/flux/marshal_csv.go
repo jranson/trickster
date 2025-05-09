@@ -200,6 +200,7 @@ func printCsvDataRows(w io.Writer, ds *dataset.DataSet,
 			logger.Error("failed to write csv row", logging.Pairs{"error": err})
 		}
 	}
+	cw.Flush()
 	return nil
 }
 
