@@ -55,7 +55,7 @@ type SeriesHeader struct {
 
 // CalculateHash sums the FNV64a hash for the Header and stores it to the Hash member
 func (sh *SeriesHeader) CalculateHash(rehash ...bool) Hash {
-	if (len(rehash) == 0 || !rehash[0]) || sh.hash > 0 {
+	if (len(rehash) == 0 || !rehash[0]) && sh.hash > 0 {
 		return sh.hash
 	}
 	hash := fnv.NewInlineFNV64a()

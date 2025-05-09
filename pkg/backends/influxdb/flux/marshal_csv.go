@@ -26,6 +26,7 @@ import (
 
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging"
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging/logger"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/headers"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries/dataset"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries/epoch"
@@ -42,6 +43,7 @@ func marshalTimeseriesCSVWriter(ds *dataset.DataSet, frb *JSONRequestBody,
 	status int, w io.Writer) error {
 
 	if hw, ok := w.(http.ResponseWriter); ok {
+		hw.Header().Set(headers.NameContentType, headers.ValueApplicationCSV)
 		hw.WriteHeader(status)
 	}
 
@@ -181,8 +183,10 @@ func printCsvDataRows(w io.Writer, ds *dataset.DataSet,
 	for _, r := range ds.Results {
 		for _, s := range r.SeriesList {
 			for _, p := range s.Points {
-				rows[k] = processCsvDataRow(fds, s, p)
-				k++
+				if row, ok := processCsvDataRow(fds, s, p); ok {
+					rows[k] = row
+					k++
+				}
 			}
 		}
 	}
@@ -200,7 +204,7 @@ func printCsvDataRows(w io.Writer, ds *dataset.DataSet,
 }
 
 func processCsvDataRow(fds timeseries.FieldDefinitions, s *dataset.Series,
-	p dataset.Point) []string {
+	p dataset.Point) ([]string, bool) {
 	row := make([]string, len(fds)+2)
 	fdl := fds.ToLookup()
 	// TODO: how to fill in result if not default? in row[1]
@@ -224,8 +228,7 @@ func processCsvDataRow(fds timeseries.FieldDefinitions, s *dataset.Series,
 		// TODO: print it based on the underlying type.
 		row[fd.OutputPosition] = fmt.Sprintf("%v", p.Values[i])
 	}
-
-	return row
+	return row, true
 }
 
 func getTableID(s *dataset.Series) string {
