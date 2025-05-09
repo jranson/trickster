@@ -76,10 +76,9 @@ var testTRQ = &timeseries.TimeRangeQuery{
 	Step:   time.Second * 60,
 	StepNS: (time.Second * 60).Nanoseconds(),
 	TimestampDefinition: timeseries.FieldDefinition{
-		Name:          "t",
-		DataType:      1,
-		ProviderData1: 1,
-		SDataType:     "UInt64",
+		Name:      "t",
+		DataType:  1,
+		SDataType: "UInt64",
 	},
 	TagFieldDefintions: []timeseries.FieldDefinition{
 		{

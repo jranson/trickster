@@ -514,12 +514,11 @@ func (ds *DataSet) SetVolatileExtents(e timeseries.ExtentList) {
 // series in the DataSet, including the TimeStamp, Tags, and Values.
 func (ds *DataSet) FieldDefinitions() (timeseries.FieldDefinitions,
 	timeseries.FieldDefinitions, timeseries.FieldDefinitions,
-	timeseries.FieldDefinitions, timeseries.FieldDefinition) {
+	timeseries.FieldDefinition) {
 	used := sets.NewStringSet()
 	all := make(timeseries.FieldDefinitions, 0, 32)
 	tags := make(timeseries.FieldDefinitions, 0, 32)
 	vals := make(timeseries.FieldDefinitions, 0, 32)
-	misc := make(timeseries.FieldDefinitions, 0, 32)
 	var tfd timeseries.FieldDefinition
 	for _, r := range ds.Results {
 		for _, s := range r.SeriesList {
@@ -544,12 +543,12 @@ func (ds *DataSet) FieldDefinitions() (timeseries.FieldDefinitions,
 				vals = append(vals, fd)
 				used.Add(fd.Name)
 			}
-			for _, fd := range s.Header.MiscFieldsList {
+			for _, fd := range s.Header.UntrackedFieldsList {
 				if used.Contains(fd.Name) {
 					continue
 				}
 				all = append(all, fd)
-				misc = append(misc, fd)
+				vals = append(vals, fd)
 				used.Add(fd.Name)
 			}
 		}
@@ -557,7 +556,7 @@ func (ds *DataSet) FieldDefinitions() (timeseries.FieldDefinitions,
 	slices.SortFunc(all, func(a, b timeseries.FieldDefinition) int {
 		return a.OutputPosition - b.OutputPosition
 	})
-	return all, tags, vals, misc, tfd
+	return all, tags, vals, tfd
 }
 
 // PointCount returns the total number of Points across all Results and Series

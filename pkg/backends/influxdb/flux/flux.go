@@ -18,57 +18,144 @@ package flux
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/iofmt"
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging"
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging/logger"
-	"github.com/trickstercache/trickster/v2/pkg/proxy/errors"
+	te "github.com/trickstercache/trickster/v2/pkg/proxy/errors"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/request"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/urls"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 	"github.com/trickstercache/trickster/v2/pkg/util/timeconv"
 )
 
-const RangeFunction = "|> range("
-const AggWindowFunc = "|> aggregateWindow("
-const WindowFunc = "|> window("
-const EveryToken = "every:"
-const StartToken = "start:"
-const StopToken = ",stop:"
-const TimeRangeTokenPlaceholder = "<TIMERANGE_TOKEN>"
-const AttrQuery = "query"
-const FluxLanguage = "flux"
+const (
+	FuncRange           = "|> range("
+	FuncAggregateWindow = "|> aggregateWindow("
+	FuncWindow          = "|> window("
+
+	TokenEvery     = "every:"
+	TokenStart     = "start:"
+	TokenStop      = "stop:"
+	TokenCommaStop = "," + TokenStop
+
+	TokenPlaceholderTimeRange = "<TIMERANGE_TOKEN>"
+
+	AttrQuery = "query"
+
+	LangFlux = "flux"
+
+	AnnotationDatatype = "datatype"
+	AnnotationGroup    = "group"
+	AnnotationDefault  = "default"
+)
+
+var ErrTimeRangeParsingFailed = errors.New("failed to parse time range")
 
 type Query struct {
 	original  string
 	tokenized string
 	step      time.Duration
 	extent    timeseries.Extent
+	dialect   JSONRequestBodyDialect
 }
 
-type RequestBody struct {
-	Query string `json:"query"`
-	Type  string `json:"type"`
+type JSONRequestBody struct {
+	Query   string                 `json:"query"`
+	Type    string                 `json:"type"`
+	Dialect JSONRequestBodyDialect `json:"dialect,omitempty"`
+	Params  map[string]any         `json:"params,omitempty"`
+	Now     any                    `json:"now,omitempty"`
 }
 
-func ParseTimeRangeQuery(r *http.Request, b []byte,
-	trq *timeseries.TimeRangeQuery, rlo *timeseries.RequestOptions) error {
-	frb := &RequestBody{}
-	err := json.Unmarshal(b, frb)
-	if err != nil {
-		return err
+type JSONRequestBodyDialect struct {
+	Annotations    []string `json:"annotations,omitempty"`
+	Delimiter      string   `json:"delimiter,omitempty"`
+	Header         *bool    `json:"header,omitempty"`
+	CommentPrefix  string   `json:"commentPrefix,omitempty"`
+	DateTimeFormat string   `json:"dateTimeFormat,omitempty"`
+}
+
+type FluxJSONResponse struct {
+	Results []FluxResult `json:"results"`
+}
+
+type FluxResult struct {
+	Tables []FluxTable `json:"tables"`
+}
+
+type FluxTable struct {
+	Columns []FluxColumn `json:"columns"`
+	Records []FluxRecord `json:"records"`
+}
+
+type FluxColumn struct {
+	Name     string `json:"name"`
+	Datatype string `json:"datatype"`
+}
+
+type FluxRecord struct {
+	Values map[string]interface{} `json:"values"`
+}
+
+func DefaultJSONRequestBody() *JSONRequestBody {
+	return &JSONRequestBody{
+		Type: "flux",
+		Dialect: JSONRequestBodyDialect{
+			Annotations: []string{
+				AnnotationDatatype, AnnotationGroup, AnnotationDefault,
+			},
+			DateTimeFormat: RFC3339,
+			Delimiter:      ",",
+		},
 	}
-	if frb.Type != FluxLanguage || frb.Query == "" {
-		return errors.MissingRequestParam(AttrQuery)
+}
+
+func DefaultAnnotations() []string {
+	return []string{"datatype", "group", "default"}
+}
+
+func ParseTimeRangeQuery(r *http.Request,
+	f iofmt.Format) (*timeseries.TimeRangeQuery, *timeseries.RequestOptions,
+	bool, error) {
+
+	if !f.IsFlux() {
+		return nil, nil, false, iofmt.ErrSupportedQueryLanguage
+	}
+
+	trq := &timeseries.TimeRangeQuery{}
+	rlo := &timeseries.RequestOptions{OutputFormat: byte(f)}
+
+	frb := DefaultJSONRequestBody()
+	b, err := request.GetBody(r)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	// user is posting a JSON request
+	if f.IsFluxInputJSON() {
+		err := json.Unmarshal(b, frb)
+		if err != nil {
+			return nil, nil, false, err
+		}
+	} else { // user is posting a Raw Query body
+		frb.Query = string(b)
+	}
+	if frb.Type != LangFlux {
+		return nil, nil, false, iofmt.ErrSupportedQueryLanguage
+	}
+	if frb.Query == "" {
+		return nil, nil, false, te.MissingRequestParam(AttrQuery)
 	}
 	trq.Statement = frb.Query
 	tokenizedStmt, extent, step, err := ParseQuery(frb.Query)
 	if err != nil {
-		return err
+		return nil, nil, false, err
 	}
 	q := &Query{
 		original:  frb.Query,
@@ -81,15 +168,21 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	trq.Statement = tokenizedStmt
 	trq.TemplateURL = urls.Clone(r.URL)
 	trq.Extent = extent
-	return nil
+	rlo.ProviderRequest = frb
+	return trq, rlo, false, nil
 }
 
 const setExtentErrorLogEvent = "read request body failed in flux.SetExtent"
 
 func SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery,
 	e *timeseries.Extent, q *Query) {
-	s := strings.ReplaceAll(q.tokenized, TimeRangeTokenPlaceholder,
-		fmt.Sprintf("start: %d, stop: %d", e.Start.Unix(), e.End.Unix()))
+	// this creates a new flux query string with TokenPlaceholderTimeRange
+	// replaced with the Start / End times from Extent e
+	s := strings.ReplaceAll(q.tokenized, TokenPlaceholderTimeRange,
+		fmt.Sprintf("%s %d, %s %d",
+			TokenStart, e.Start.Unix(), TokenStop, e.End.Unix()))
+	// this reads the JSON body, unmarshals it to a map[string]any, swaps in the
+	// transformed query, marshals it back to a []byte and sets r.Body to it.
 	b, err := request.GetBody(r)
 	if err != nil || len(b) == 0 {
 		logger.Error(setExtentErrorLogEvent,
@@ -118,7 +211,7 @@ func ParseQuery(input string) (string, timeseries.Extent, time.Duration, error) 
 	var err error
 	lines := strings.Split(input, "\n")
 	for i, line := range lines {
-		ri := strings.Index(line, RangeFunction)
+		ri := strings.Index(line, FuncRange)
 		switch {
 		case ri >= 0:
 			e, err = parseRange(line)
@@ -126,8 +219,8 @@ func ParseQuery(input string) (string, timeseries.Extent, time.Duration, error) 
 				return "", e, d, err
 			}
 			lines[i] = tokenizeRangeLine(line, ri)
-		case strings.Contains(line, AggWindowFunc),
-			strings.Contains(line, WindowFunc):
+		case strings.Contains(line, FuncAggregateWindow),
+			strings.Contains(line, FuncWindow):
 			d, err = parseStep(line)
 			if err != nil {
 				return "", e, d, err
@@ -138,9 +231,9 @@ func ParseQuery(input string) (string, timeseries.Extent, time.Duration, error) 
 }
 
 func parseStep(input string) (time.Duration, error) {
-	i := strings.Index(input, EveryToken)
+	i := strings.Index(input, TokenEvery)
 	if i < 0 {
-		return 0, nil // TOOD: correct error here
+		return 0, ErrTimeRangeParsingFailed
 	}
 	i += 6
 	input = input[i:]
@@ -151,7 +244,7 @@ func parseStep(input string) (time.Duration, error) {
 	} else if j >= 0 {
 		input = strings.TrimSpace(input[:j])
 	} else {
-		return 0, nil // TOOD: correct error here
+		return 0, ErrTimeRangeParsingFailed
 	}
 	return time.ParseDuration(input)
 }
@@ -159,20 +252,20 @@ func parseStep(input string) (time.Duration, error) {
 func parseRange(input string) (timeseries.Extent, error) {
 	var e timeseries.Extent
 	input = strings.ReplaceAll(input, " ", "")
-	i := strings.Index(input, StartToken)
+	i := strings.Index(input, TokenStart)
 	if i < 0 {
-		return e, nil // TODO: correct error here
+		return e, ErrTimeRangeParsingFailed
 	}
 	i += 6
 	input = input[i:]
-	i = strings.Index(input, StopToken)
+	i = strings.Index(input, TokenCommaStop)
 	if i < 0 {
-		return e, nil // TODO: correct error here
+		return e, ErrTimeRangeParsingFailed
 	}
-	input = strings.TrimSuffix(strings.ReplaceAll(input, StopToken, ","), ")")
+	input = strings.TrimSuffix(strings.ReplaceAll(input, TokenCommaStop, ","), ")")
 	parts := strings.Split(input, ",")
 	if len(parts) != 2 {
-		return e, nil // TODO: correct error here
+		return e, ErrTimeRangeParsingFailed
 	}
 	var err error
 	e.Start, err = tryParseTimeField(parts[0])
@@ -198,7 +291,7 @@ func tryParseTimeField(s string) (time.Time, error) {
 	if t, eut = tryParseUnixTimestamp(s); eut == nil {
 		return t, nil
 	}
-	return time.Time{}, nil // TODO: correct error here
+	return time.Time{}, ErrTimeRangeParsingFailed
 }
 
 func tryParseRelativeDuration(s string) (time.Time, error) {
@@ -230,5 +323,5 @@ func tokenizeRangeLine(input string, funcStart int) string {
 	if i < 0 {
 		return input
 	}
-	return input[:funcStart+len(RangeFunction)] + TimeRangeTokenPlaceholder + input[funcStart+i:]
+	return input[:funcStart+len(FuncRange)] + TokenPlaceholderTimeRange + input[funcStart+i:]
 }

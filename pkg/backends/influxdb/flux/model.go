@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package model
+package flux
 
 import (
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"

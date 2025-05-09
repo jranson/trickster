@@ -70,7 +70,7 @@ func TestFormat(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			out := test.input.Format(test.typ)
+			out := test.input.Format(test.typ, true)
 			if out != test.exp1 {
 				t.Errorf("got %s expected %s", out, test.exp1)
 			}

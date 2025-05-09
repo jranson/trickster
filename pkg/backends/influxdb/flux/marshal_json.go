@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package model
+package flux
 
-import "testing"
+import (
+	"io"
 
-func TestNewModeler(t *testing.T) {
+	"github.com/trickstercache/trickster/v2/pkg/timeseries/dataset"
+)
 
-	m := NewModeler()
-	if m.WireMarshalWriter == nil {
-		t.Error("expected non-nil modeler funcs")
-	}
-
+func marshalTimeseriesJSONWriter(ds *dataset.DataSet,
+	frb *JSONRequestBody, status int, w io.Writer) error {
+	return nil
 }

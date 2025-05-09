@@ -17,16 +17,19 @@
 package influxql
 
 import (
-	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/trickstercache/trickster/v2/pkg/proxy/errors"
-	"github.com/trickstercache/trickster/v2/pkg/proxy/headers"
-	"github.com/trickstercache/trickster/v2/pkg/proxy/methods"
+	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/iofmt"
+	te "github.com/trickstercache/trickster/v2/pkg/errors"
+	"github.com/trickstercache/trickster/v2/pkg/observability/logging"
+	"github.com/trickstercache/trickster/v2/pkg/observability/logging/logger"
+	pe "github.com/trickstercache/trickster/v2/pkg/proxy/errors"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/params"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/request"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/urls"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 
@@ -51,24 +54,42 @@ const (
 	ParamChunked = "chunked"
 )
 
-func ParseTimeRangeQuery(r *http.Request, b []byte,
-	values url.Values, trq *timeseries.TimeRangeQuery,
-	rlo *timeseries.RequestOptions) (bool, error) {
-	if trq.Statement == "" {
-		return false, errors.MissingURLParam(ParamQuery)
+func ParseTimeRangeQuery(r *http.Request,
+	f iofmt.Format) (*timeseries.TimeRangeQuery, *timeseries.RequestOptions,
+	bool, error) {
+	if r == nil || !f.IsInfluxQL() {
+		return nil, nil, false, iofmt.ErrSupportedQueryLanguage
 	}
+
+	uv := r.URL.Query()
+	bv := make(url.Values)
+	if r.Method == http.MethodPost {
+		bv, _, _ = params.GetRequestValues(r)
+	} else if r.Method != http.MethodGet {
+		logger.Error("unuspported method in influxql.ParseTimeRangeQuery",
+			logging.Pairs{"method": r.Method})
+		return nil, nil, false, te.ErrInvalidMethod
+	}
+	cv := maps.Clone(uv)
+	maps.Copy(cv, bv)
+
+	trq := &timeseries.TimeRangeQuery{}
+	rlo := &timeseries.RequestOptions{OutputFormat: 0}
+
+	statement := cv.Get(ParamQuery)
+	if statement == "" {
+		return nil, nil, false, pe.MissingURLParam(ParamQuery)
+	}
+	trq.Statement = statement
 
 	var valuer = &influxql.NowValuer{Now: time.Now()}
 
-	if b, ok := epochToFlag[values.Get(ParamEpoch)]; ok {
-		rlo.TimeFormat = b
+	if x, ok := epochToFlag[cv.Get(ParamEpoch)]; ok {
+		rlo.TimeFormat = x
 	}
 
-	if values.Get(ParamPretty) == "true" {
+	if cv.Get(ParamPretty) == "true" {
 		rlo.OutputFormat = 1
-	} else if r != nil && r.Header != nil &&
-		r.Header.Get(headers.NameAccept) == headers.ValueApplicationCSV {
-		rlo.OutputFormat = 2
 	}
 
 	var cacheError error
@@ -76,7 +97,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	p := influxql.NewParser(strings.NewReader(trq.Statement))
 	q, err := p.ParseQuery()
 	if err != nil {
-		return false, err
+		return nil, nil, false, err
 	}
 
 	trq.Step = -1
@@ -86,7 +107,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	for _, v := range q.Statements {
 		sel, ok := v.(*influxql.SelectStatement)
 		if !ok || sel.Condition == nil {
-			cacheError = errors.ErrNotTimeRangeQuery
+			cacheError = pe.ErrNotTimeRangeQuery
 		} else {
 			canObjectCache = true
 		}
@@ -99,7 +120,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 			} else if trq.Step != step {
 				// this condition means multiple queries were present, and had
 				// different step widths
-				cacheError = errors.ErrStepParse
+				cacheError = pe.ErrStepParse
 			}
 		}
 		_, tr, err := influxql.ConditionExpr(sel.Condition, valuer)
@@ -120,7 +141,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 		} else if trq.Extent != ex {
 			// this condition means multiple queries were present, and had
 			// different time ranges
-			cacheError = errors.ErrNotTimeRangeQuery
+			cacheError = pe.ErrNotTimeRangeQuery
 		}
 
 		// this sets a zero time range for normalizing the query for cache key hashing
@@ -131,7 +152,7 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	}
 
 	if !hasTimeQueryParts {
-		cacheError = errors.ErrNotTimeRangeQuery
+		cacheError = pe.ErrNotTimeRangeQuery
 	}
 
 	// this field is used as part of the data that calculates the cache key
@@ -141,17 +162,27 @@ func ParseTimeRangeQuery(r *http.Request, b []byte,
 	trq.CacheKeyElements = map[string]string{
 		ParamQuery: trq.Statement,
 	}
-	qt := url.Values(http.Header(values).Clone())
-	qt.Set(ParamQuery, trq.Statement)
 
-	// Swap in the Tokenzed Query in the Url Params
-	trq.TemplateURL.RawQuery = qt.Encode()
-
-	if cacheError != nil {
-		return true, cacheError
+	if f.IsPost() {
+		b, err := request.GetBody(r)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		trq.OriginalBody = b
+		// this sets the body to the tokenized value. TODO: see if we really need this.
+		// e.g., if the TRQ has the statement, we can change the body only if we need to set the extent?
+		bv = url.Values{ParamQuery: []string{trq.Statement}}
+		request.SetBody(r, []byte(bv.Encode()))
+	} else {
+		qv := url.Values(http.Header(uv).Clone())
+		qv.Set(ParamQuery, trq.Statement)
+		// Swap in the Tokenzed Query in the Url Params
+		trq.TemplateURL.RawQuery = qv.Encode()
 	}
-
-	return canObjectCache, nil
+	if cacheError != nil {
+		return nil, nil, true, cacheError
+	}
+	return trq, rlo, canObjectCache, nil
 }
 
 func SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery,
@@ -163,56 +194,28 @@ func SetExtent(r *http.Request, trq *timeseries.TimeRangeQuery,
 			sel.SetTimeRange(extent.Start, extent.End.Add(trq.Step))
 		}
 	}
-	uq := q.String()
-	v, _, isBody := params.GetRequestValues(r)
-	v.Set(ParamQuery, uq)
-	if isBody {
-		r.Body = io.NopCloser(strings.NewReader(uq))
-		r.ContentLength = int64(len(uq))
+
+	var v url.Values
+	if r.Method == http.MethodGet {
+		// GET request, query param is in the url
+		v, _, _ = params.GetRequestValues(r)
+		v.Set(ParamQuery, q.String())
+	} else if r.Method == http.MethodPost {
+		// POST request; query param is in the body, others are in the url
+		rb := url.Values{ParamQuery: []string{q.String()}}.Encode()
+		request.SetBody(r, []byte(rb))
+		v = r.URL.Query()
+		if v == nil {
+			v = make(url.Values)
+		}
+	} else {
+		logger.Error("unuspported method in influxql.SetExtent",
+			logging.Pairs{"method": r.Method})
+		return
 	}
+
 	v.Set(ParamEpoch, "ns") // request nanosecond epoch timestamp format from server
 	v.Del(ParamChunked)     // we do not support chunked output or handling chunked server responses
 	v.Del(ParamPretty)
-	if !methods.HasBody(r.Method) {
-		r.URL.RawQuery = v.Encode()
-	}
-	// Need to set template URL for cache key derivation
-	trq.TemplateURL = urls.Clone(r.URL)
-	qt := url.Values(http.Header(v).Clone())
-	trq.TemplateURL.RawQuery = qt.Encode()
+	r.URL.RawQuery = v.Encode()
 }
-
-/*
-	var uq string
-	if q, ok := trq.ParsedQuery.(*influxql.Query); ok {
-		for _, s := range q.Statements {
-			if sel, ok := s.(*influxql.SelectStatement); ok {
-				// since setting timerange results in a clause of '>= start AND < end', we add the
-				// size of 1 step onto the end time so as to ensure it is included in the results
-				sel.SetTimeRange(extent.Start, extent.End.Add(trq.Step))
-			}
-		}
-		uq = q.String()
-		// } else if trq.ProviderData1 == flux.LanuageFlux {
-		// 	q.SetExtent(*extent)
-		// 	uq = q.String()
-		// } else {
-		// 	return
-	}
-
-	v.Set(ti.ParamQuery, uq)
-	if isBody {
-		r.Body = io.NopCloser(strings.NewReader(uq))
-		r.ContentLength = int64(len(uq))
-	}
-	v.Set(ti.ParamEpoch, "ns") // request nanosecond epoch timestamp format from server
-	v.Del(ti.ParamChunked)     // we do not support chunked output or handling chunked server responses
-	v.Del(ti.ParamPretty)
-	if !methods.HasBody(r.Method) {
-		r.URL.RawQuery = v.Encode()
-	}
-	// Need to set template URL for cache key derivation
-	trq.TemplateURL = urls.Clone(r.URL)
-	qt := url.Values(http.Header(v).Clone())
-	trq.TemplateURL.RawQuery = qt.Encode()
-*/

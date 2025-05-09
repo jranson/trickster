@@ -17,10 +17,16 @@
 package flux
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/iofmt"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/headers"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
+	"github.com/trickstercache/trickster/v2/pkg/util/timeconv"
 )
 
 const fqAbsoluteTimeMS string = `from("test-bucket")
@@ -55,3 +61,63 @@ func TestParseQuery(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+const testFluxQuery1 = `from("test-bucket")
+  |> range(start: -7d, stop: -6d)
+  |> aggregateWindow(every: 1m, func: mean)`
+
+func TestParseTimeRangeQuery(t *testing.T) {
+	b, _ := json.Marshal(JSONRequestBody{
+		Query: testFluxQuery1,
+		Type:  LangFlux,
+	})
+	req, _ := http.NewRequest(http.MethodPost, "https://blah.com/",
+		bytes.NewReader(b))
+	req.Header.Set(headers.NameContentType, headers.ValueApplicationJSON)
+	trq, _, _, err := ParseTimeRangeQuery(req, iofmt.FluxJsonCsv)
+	if err != nil {
+		t.Error(err)
+	} else {
+		if int(trq.Extent.End.Sub(trq.Extent.Start).Hours()) != int(timeconv.Day.Hours()) {
+			t.Errorf("expected %d got %d", int(timeconv.Day.Hours()), int(trq.Extent.End.Sub(trq.Extent.Start).Hours()))
+		}
+	}
+}
+
+const testFluxQuery2 = `from("test-bucket")
+  |> range(start: -7d, stop: -6d)
+  |> aggregateWindow(every: 1m, func: mean)`
+
+const testFluxQueryTokenized2 = `from("test-bucket")
+  |> <TIMERANGE_TOKEN>
+  |> aggregateWindow(every: 1m, func: mean)`
+
+// func TestSetExtent(t *testing.T) {
+
+// 	now := time.Now()
+
+// 	start := now.Add(-7 * 24 * time.Hour)
+// 	end := now.Add(-6 * 24 * time.Hour)
+
+// 	q := &Query{
+// 		original:  testFluxQuery2,
+// 		tokenized: testFluxQueryTokenized2,
+// 		step:      time.Minute,
+// 	}
+
+// 	r, _ := http.NewRequest(http.MethodGet, "", nil)
+// 	r.Method = http.MethodPost
+// 	r.Header.Add(headers.NameContentType, headers.ValueApplicationFlux)
+// 	body := strings.Replace(testFluxQueryTokenized1, "<TIMERANGE_TOKEN>", "range(start: -7d, stop: -6d)", 1)
+// 	r.Body = io.NopCloser(bytes.NewBufferString(body))
+// 	trq := &timeseries.TimeRangeQuery{Step: time.Second * 60}
+// 	e := &timeseries.Extent{Start: start, End: end}
+// 	ic.SetExtent(r, trq, e)
+
+// 	newRange := fmt.Sprintf("range(start: %s, stop: %s)", start.Format(time.RFC3339), end.Format(time.RFC3339))
+// 	expected := strings.Replace(testFluxQueryTokenized1, "<TIMERANGE_TOKEN>", newRange, 1)
+// 	b, _ := io.ReadAll(r.Body)
+// 	if string(b) != expected {
+// 		t.Errorf("expected %s, got %s", expected, string(b))
+// 	}
+// }

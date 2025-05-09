@@ -108,16 +108,26 @@ func (z *FieldDefinition) DecodeMsg(dc *msgp.Reader) (err error) {
 				}
 				z.DataType = FieldDataType(zb0002)
 			}
-		case "pos":
-			z.OutputPosition, err = dc.ReadInt()
-			if err != nil {
-				err = msgp.WrapError(err, "OutputPosition")
-				return
-			}
 		case "stype":
 			z.SDataType, err = dc.ReadString()
 			if err != nil {
 				err = msgp.WrapError(err, "SDataType")
+				return
+			}
+		case "role":
+			{
+				var zb0003 byte
+				zb0003, err = dc.ReadByte()
+				if err != nil {
+					err = msgp.WrapError(err, "Role")
+					return
+				}
+				z.Role = FieldRole(zb0003)
+			}
+		case "pos":
+			z.OutputPosition, err = dc.ReadInt()
+			if err != nil {
+				err = msgp.WrapError(err, "OutputPosition")
 				return
 			}
 		case "dv":
@@ -140,12 +150,12 @@ func (z *FieldDefinition) DecodeMsg(dc *msgp.Reader) (err error) {
 // EncodeMsg implements msgp.Encodable
 func (z *FieldDefinition) EncodeMsg(en *msgp.Writer) (err error) {
 	// check for omitted fields
-	zb0001Len := uint32(5)
-	var zb0001Mask uint8 /* 5 bits */
+	zb0001Len := uint32(6)
+	var zb0001Mask uint8 /* 6 bits */
 	_ = zb0001Mask
 	if z.DefaultValue == "" {
 		zb0001Len--
-		zb0001Mask |= 0x10
+		zb0001Mask |= 0x20
 	}
 	// variable map header, size zb0001Len
 	err = en.Append(0x80 | uint8(zb0001Len))
@@ -175,16 +185,6 @@ func (z *FieldDefinition) EncodeMsg(en *msgp.Writer) (err error) {
 			err = msgp.WrapError(err, "DataType")
 			return
 		}
-		// write "pos"
-		err = en.Append(0xa3, 0x70, 0x6f, 0x73)
-		if err != nil {
-			return
-		}
-		err = en.WriteInt(z.OutputPosition)
-		if err != nil {
-			err = msgp.WrapError(err, "OutputPosition")
-			return
-		}
 		// write "stype"
 		err = en.Append(0xa5, 0x73, 0x74, 0x79, 0x70, 0x65)
 		if err != nil {
@@ -195,7 +195,27 @@ func (z *FieldDefinition) EncodeMsg(en *msgp.Writer) (err error) {
 			err = msgp.WrapError(err, "SDataType")
 			return
 		}
-		if (zb0001Mask & 0x10) == 0 { // if not omitted
+		// write "role"
+		err = en.Append(0xa4, 0x72, 0x6f, 0x6c, 0x65)
+		if err != nil {
+			return
+		}
+		err = en.WriteByte(byte(z.Role))
+		if err != nil {
+			err = msgp.WrapError(err, "Role")
+			return
+		}
+		// write "pos"
+		err = en.Append(0xa3, 0x70, 0x6f, 0x73)
+		if err != nil {
+			return
+		}
+		err = en.WriteInt(z.OutputPosition)
+		if err != nil {
+			err = msgp.WrapError(err, "OutputPosition")
+			return
+		}
+		if (zb0001Mask & 0x20) == 0 { // if not omitted
 			// write "dv"
 			err = en.Append(0xa2, 0x64, 0x76)
 			if err != nil {
@@ -215,12 +235,12 @@ func (z *FieldDefinition) EncodeMsg(en *msgp.Writer) (err error) {
 func (z *FieldDefinition) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// check for omitted fields
-	zb0001Len := uint32(5)
-	var zb0001Mask uint8 /* 5 bits */
+	zb0001Len := uint32(6)
+	var zb0001Mask uint8 /* 6 bits */
 	_ = zb0001Mask
 	if z.DefaultValue == "" {
 		zb0001Len--
-		zb0001Mask |= 0x10
+		zb0001Mask |= 0x20
 	}
 	// variable map header, size zb0001Len
 	o = append(o, 0x80|uint8(zb0001Len))
@@ -233,13 +253,16 @@ func (z *FieldDefinition) MarshalMsg(b []byte) (o []byte, err error) {
 		// string "type"
 		o = append(o, 0xa4, 0x74, 0x79, 0x70, 0x65)
 		o = msgp.AppendByte(o, byte(z.DataType))
-		// string "pos"
-		o = append(o, 0xa3, 0x70, 0x6f, 0x73)
-		o = msgp.AppendInt(o, z.OutputPosition)
 		// string "stype"
 		o = append(o, 0xa5, 0x73, 0x74, 0x79, 0x70, 0x65)
 		o = msgp.AppendString(o, z.SDataType)
-		if (zb0001Mask & 0x10) == 0 { // if not omitted
+		// string "role"
+		o = append(o, 0xa4, 0x72, 0x6f, 0x6c, 0x65)
+		o = msgp.AppendByte(o, byte(z.Role))
+		// string "pos"
+		o = append(o, 0xa3, 0x70, 0x6f, 0x73)
+		o = msgp.AppendInt(o, z.OutputPosition)
+		if (zb0001Mask & 0x20) == 0 { // if not omitted
 			// string "dv"
 			o = append(o, 0xa2, 0x64, 0x76)
 			o = msgp.AppendString(o, z.DefaultValue)
@@ -282,16 +305,26 @@ func (z *FieldDefinition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 				z.DataType = FieldDataType(zb0002)
 			}
-		case "pos":
-			z.OutputPosition, bts, err = msgp.ReadIntBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "OutputPosition")
-				return
-			}
 		case "stype":
 			z.SDataType, bts, err = msgp.ReadStringBytes(bts)
 			if err != nil {
 				err = msgp.WrapError(err, "SDataType")
+				return
+			}
+		case "role":
+			{
+				var zb0003 byte
+				zb0003, bts, err = msgp.ReadByteBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "Role")
+					return
+				}
+				z.Role = FieldRole(zb0003)
+			}
+		case "pos":
+			z.OutputPosition, bts, err = msgp.ReadIntBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "OutputPosition")
 				return
 			}
 		case "dv":
@@ -314,7 +347,7 @@ func (z *FieldDefinition) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *FieldDefinition) Msgsize() (s int) {
-	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + msgp.ByteSize + 4 + msgp.IntSize + 6 + msgp.StringPrefixSize + len(z.SDataType) + 3 + msgp.StringPrefixSize + len(z.DefaultValue)
+	s = 1 + 5 + msgp.StringPrefixSize + len(z.Name) + 5 + msgp.ByteSize + 6 + msgp.StringPrefixSize + len(z.SDataType) + 5 + msgp.ByteSize + 4 + msgp.IntSize + 3 + msgp.StringPrefixSize + len(z.DefaultValue)
 	return
 }
 
@@ -406,6 +439,58 @@ func (z FieldDefinitions) Msgsize() (s int) {
 }
 
 // DecodeMsg implements msgp.Decodable
+func (z *FieldRole) DecodeMsg(dc *msgp.Reader) (err error) {
+	{
+		var zb0001 byte
+		zb0001, err = dc.ReadByte()
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = FieldRole(zb0001)
+	}
+	return
+}
+
+// EncodeMsg implements msgp.Encodable
+func (z FieldRole) EncodeMsg(en *msgp.Writer) (err error) {
+	err = en.WriteByte(byte(z))
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
+func (z FieldRole) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendByte(o, byte(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *FieldRole) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var zb0001 byte
+		zb0001, bts, err = msgp.ReadByteBytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = FieldRole(zb0001)
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z FieldRole) Msgsize() (s int) {
+	s = msgp.ByteSize
+	return
+}
+
+// DecodeMsg implements msgp.Decodable
 func (z *SeriesFields) DecodeMsg(dc *msgp.Reader) (err error) {
 	var field []byte
 	_ = field
@@ -467,22 +552,22 @@ func (z *SeriesFields) DecodeMsg(dc *msgp.Reader) (err error) {
 					return
 				}
 			}
-		case "Misc":
+		case "Untracked":
 			var zb0004 uint32
 			zb0004, err = dc.ReadArrayHeader()
 			if err != nil {
-				err = msgp.WrapError(err, "Misc")
+				err = msgp.WrapError(err, "Untracked")
 				return
 			}
-			if cap(z.Misc) >= int(zb0004) {
-				z.Misc = (z.Misc)[:zb0004]
+			if cap(z.Untracked) >= int(zb0004) {
+				z.Untracked = (z.Untracked)[:zb0004]
 			} else {
-				z.Misc = make(FieldDefinitions, zb0004)
+				z.Untracked = make(FieldDefinitions, zb0004)
 			}
-			for za0003 := range z.Misc {
-				err = z.Misc[za0003].DecodeMsg(dc)
+			for za0003 := range z.Untracked {
+				err = z.Untracked[za0003].DecodeMsg(dc)
 				if err != nil {
-					err = msgp.WrapError(err, "Misc", za0003)
+					err = msgp.WrapError(err, "Untracked", za0003)
 					return
 				}
 			}
@@ -550,20 +635,20 @@ func (z *SeriesFields) EncodeMsg(en *msgp.Writer) (err error) {
 			return
 		}
 	}
-	// write "Misc"
-	err = en.Append(0xa4, 0x4d, 0x69, 0x73, 0x63)
+	// write "Untracked"
+	err = en.Append(0xa9, 0x55, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x64)
 	if err != nil {
 		return
 	}
-	err = en.WriteArrayHeader(uint32(len(z.Misc)))
+	err = en.WriteArrayHeader(uint32(len(z.Untracked)))
 	if err != nil {
-		err = msgp.WrapError(err, "Misc")
+		err = msgp.WrapError(err, "Untracked")
 		return
 	}
-	for za0003 := range z.Misc {
-		err = z.Misc[za0003].EncodeMsg(en)
+	for za0003 := range z.Untracked {
+		err = z.Untracked[za0003].EncodeMsg(en)
 		if err != nil {
-			err = msgp.WrapError(err, "Misc", za0003)
+			err = msgp.WrapError(err, "Untracked", za0003)
 			return
 		}
 	}
@@ -611,13 +696,13 @@ func (z *SeriesFields) MarshalMsg(b []byte) (o []byte, err error) {
 			return
 		}
 	}
-	// string "Misc"
-	o = append(o, 0xa4, 0x4d, 0x69, 0x73, 0x63)
-	o = msgp.AppendArrayHeader(o, uint32(len(z.Misc)))
-	for za0003 := range z.Misc {
-		o, err = z.Misc[za0003].MarshalMsg(o)
+	// string "Untracked"
+	o = append(o, 0xa9, 0x55, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x65, 0x64)
+	o = msgp.AppendArrayHeader(o, uint32(len(z.Untracked)))
+	for za0003 := range z.Untracked {
+		o, err = z.Untracked[za0003].MarshalMsg(o)
 		if err != nil {
-			err = msgp.WrapError(err, "Misc", za0003)
+			err = msgp.WrapError(err, "Untracked", za0003)
 			return
 		}
 	}
@@ -689,22 +774,22 @@ func (z *SeriesFields) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
-		case "Misc":
+		case "Untracked":
 			var zb0004 uint32
 			zb0004, bts, err = msgp.ReadArrayHeaderBytes(bts)
 			if err != nil {
-				err = msgp.WrapError(err, "Misc")
+				err = msgp.WrapError(err, "Untracked")
 				return
 			}
-			if cap(z.Misc) >= int(zb0004) {
-				z.Misc = (z.Misc)[:zb0004]
+			if cap(z.Untracked) >= int(zb0004) {
+				z.Untracked = (z.Untracked)[:zb0004]
 			} else {
-				z.Misc = make(FieldDefinitions, zb0004)
+				z.Untracked = make(FieldDefinitions, zb0004)
 			}
-			for za0003 := range z.Misc {
-				bts, err = z.Misc[za0003].UnmarshalMsg(bts)
+			for za0003 := range z.Untracked {
+				bts, err = z.Untracked[za0003].UnmarshalMsg(bts)
 				if err != nil {
-					err = msgp.WrapError(err, "Misc", za0003)
+					err = msgp.WrapError(err, "Untracked", za0003)
 					return
 				}
 			}
@@ -736,9 +821,9 @@ func (z *SeriesFields) Msgsize() (s int) {
 	for za0002 := range z.Values {
 		s += z.Values[za0002].Msgsize()
 	}
-	s += 5 + msgp.ArrayHeaderSize
-	for za0003 := range z.Misc {
-		s += z.Misc[za0003].Msgsize()
+	s += 10 + msgp.ArrayHeaderSize
+	for za0003 := range z.Untracked {
+		s += z.Untracked[za0003].Msgsize()
 	}
 	s += 14 + msgp.IntSize
 	return

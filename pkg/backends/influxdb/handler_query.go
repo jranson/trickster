@@ -22,29 +22,38 @@ import (
 
 	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/flux"
 	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/influxql"
+	"github.com/trickstercache/trickster/v2/pkg/backends/influxdb/iofmt"
+	"github.com/trickstercache/trickster/v2/pkg/errors"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/engines"
-	"github.com/trickstercache/trickster/v2/pkg/proxy/errors"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/params"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/request"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/urls"
 	"github.com/trickstercache/trickster/v2/pkg/timeseries"
 )
 
 // QueryHandler handles timeseries requests for InfluxDB and processes them through the delta proxy cache
 func (c *Client) QueryHandler(w http.ResponseWriter, r *http.Request) {
-	qp, qb, fromBody := params.GetRequestValues(r)
-	q := strings.Trim(strings.ToLower(qp.Get(influxql.ParamQuery)), " \t\n")
-	if q == "" {
-		if len(qb) == 0 || !fromBody {
+
+	f := iofmt.Detect(r)
+	switch {
+	case f.IsInfluxQL():
+		qp, _, _ := params.GetRequestValues(r)
+		// skip non-selects
+		if q := qp.Get(influxql.ParamQuery); !strings.Contains(strings.ToLower(q), "select ") {
+			// TODO: ADD Proxy-Only metric increment
 			c.ProxyHandler(w, r)
 			return
 		}
-		q = string(qb)
+	case f.IsFlux():
+		b, err := request.GetBody(r)
+		if err != nil || len(b) == 0 ||
+			!strings.Contains(strings.ToLower(string(b)), "from(") {
+			// TODO: ADD Proxy-Only metric increment
+			c.ProxyHandler(w, r)
+			return
+		}
 	}
-	// if it's not a select statement or flux query, just proxy it instead
-	if !strings.Contains(q, "select ") && !strings.Contains(q, "from(") {
-		c.ProxyHandler(w, r)
-		return
-	}
+
 	r.URL = urls.BuildUpstreamURL(r, c.BaseUpstreamURL())
 	engines.DeltaProxyCacheRequest(w, r, c.Modeler())
 }
@@ -52,21 +61,12 @@ func (c *Client) QueryHandler(w http.ResponseWriter, r *http.Request) {
 // ParseTimeRangeQuery parses the key parts of a TimeRangeQuery from the inbound HTTP Request
 func (c *Client) ParseTimeRangeQuery(r *http.Request) (*timeseries.TimeRangeQuery,
 	*timeseries.RequestOptions, bool, error) {
-	trq := &timeseries.TimeRangeQuery{}
-	rlo := &timeseries.RequestOptions{}
-	values, b, isBody := params.GetRequestValues(r)
-	if isBody {
-		trq.OriginalBody = b
+	f := iofmt.Detect(r)
+	switch {
+	case f.IsInfluxQL():
+		return influxql.ParseTimeRangeQuery(r, f)
+	case f.IsFlux():
+		return flux.ParseTimeRangeQuery(r, f)
 	}
-	statement := values.Get(influxql.ParamQuery)
-	if statement == "" && isBody && len(b) > 0 {
-		s := string(b)
-		if strings.Contains(s, "aggregateWindow(") && strings.Contains(s, "bucket:") {
-			return trq, rlo, true, flux.ParseTimeRangeQuery(r, b, trq, rlo)
-		}
-		return nil, nil, false, errors.MissingURLParam(influxql.ParamQuery)
-	}
-	trq.Statement = statement
-	t, err := influxql.ParseTimeRangeQuery(r, b, values, trq, rlo)
-	return trq, rlo, t, err
+	return nil, nil, false, errors.ErrBadRequest
 }

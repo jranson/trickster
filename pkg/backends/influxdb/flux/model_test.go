@@ -14,28 +14,15 @@
  * limitations under the License.
  */
 
-package influxdb
+package flux
 
-import (
-	"fmt"
-	"net/http"
-	"net/url"
-	"testing"
-)
+import "testing"
 
-const untokenized = "SELECT * FROM some_column WHERE time >= now() - 6h GROUP BY time(1m)"
+func TestNewModeler(t *testing.T) {
 
-func TestParseTimeRangeQuery(t *testing.T) {
-	url := fmt.Sprintf("http://example.com/?q=%s",
-		url.QueryEscape(untokenized))
-	r, _ := http.NewRequest(http.MethodGet, url, nil)
-	c := &Client{}
-	trq, _, _, err := c.ParseTimeRangeQuery(r)
-	if err != nil {
-		t.Error(err)
-	}
-	if trq == nil {
-		t.Error("expected non-nil time range query")
+	m := NewModeler()
+	if m.WireMarshalWriter == nil {
+		t.Error("expected non-nil modeler funcs")
 	}
 
 }

@@ -43,30 +43,43 @@ const (
 	TimeSQL
 	DateTimeSQL
 	Null
+
+	RoleUnknown FieldRole = iota
+	RoleTimestamp
+	RoleTag
+	RoleValue
+	RoleUntracked
 )
 
 // FieldDataType is a byte representing the data type of a Field
 // when stored in a Point's Values list
 type FieldDataType byte
 
+// FieldDataType is a byte representing the role of a Field (Value, Tag, etc)
+type FieldRole byte
+
 // FieldDefinition describes a field by name and type
 type FieldDefinition struct {
 	Name           string        `msg:"name" json:"name"`
 	DataType       FieldDataType `msg:"type" json:"type"`
-	OutputPosition int           `msg:"pos" json:"pos,omitempty"`
 	SDataType      string        `msg:"stype" json:"stype,omitempty"`
+	Role           FieldRole     `msg:"role" json:"role"`
+	OutputPosition int           `msg:"pos" json:"pos,omitempty"`
 	DefaultValue   string        `msg:"dv,omitempty" json:"dv,omitempty"`
 }
 
 // FieldDefinitions represents a list type FieldDefinition
 type FieldDefinitions []FieldDefinition
 
+// FieldDefinitionLookup represents a map of FieldDefinitions keyed by name
+type FieldDefinitionLookup map[string]FieldDefinition
+
 // SeriesFields groups together a Series's Timestamp, Tags and Value Fields
 type SeriesFields struct {
 	Timestamp     FieldDefinition
 	Tags          FieldDefinitions
 	Values        FieldDefinitions
-	Misc          FieldDefinitions
+	Untracked     FieldDefinitions
 	ResultNameCol int
 }
 
@@ -86,6 +99,14 @@ func (fd FieldDefinition) String() string {
 func (fds FieldDefinitions) Clone() FieldDefinitions {
 	out := make(FieldDefinitions, len(fds))
 	copy(out, fds)
+	return out
+}
+
+func (fds FieldDefinitions) ToLookup() FieldDefinitionLookup {
+	out := make(FieldDefinitionLookup, len(fds))
+	for _, fd := range fds {
+		out[fd.Name] = fd
+	}
 	return out
 }
 

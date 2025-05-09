@@ -37,8 +37,8 @@ type TimestampParserFunc func(string, timeseries.FieldDefinition) (epoch.Epoch, 
 
 // Parser represents a CSV-to-DataSet Parser
 type Parser interface {
-	ToDataSet([][]string) (*dataset.DataSet, error)
-	ToTimeseries([][]string) (timeseries.Timeseries, error)
+	ToDataSet([][]string, *timeseries.TimeRangeQuery) (*dataset.DataSet, error)
+	ToTimeseries([][]string, *timeseries.TimeRangeQuery) (timeseries.Timeseries, error)
 }
 
 type seriesKeyDatum struct {
@@ -115,13 +115,16 @@ type csvState struct {
 	seriesOrder   seriesKeyDataCacheItems
 	seriesCounts  sets.StringCounterSet
 	pointCounts   sets.StringCounterSet
+	pointsUsed    sets.StringCounterSet
 }
 
-func (p *parser) ToTimeseries(matrix [][]string) (timeseries.Timeseries, error) {
-	return p.ToDataSet(matrix)
+func (p *parser) ToTimeseries(matrix [][]string,
+	trq *timeseries.TimeRangeQuery) (timeseries.Timeseries, error) {
+	return p.ToDataSet(matrix, trq)
 }
 
-func (p *parser) ToDataSet(matrix [][]string) (*dataset.DataSet, error) {
+func (p *parser) ToDataSet(matrix [][]string,
+	trq *timeseries.TimeRangeQuery) (*dataset.DataSet, error) {
 	sf, err := p.fieldParser(matrix)
 	if err != nil {
 		return nil, err
@@ -133,6 +136,8 @@ func (p *parser) ToDataSet(matrix [][]string) (*dataset.DataSet, error) {
 	if err != nil {
 		return nil, err
 	}
+	state.ds.TimeRangeQuery = trq
+	state.ds.ExtentList = timeseries.ExtentList{trq.Extent}
 	err = p.populateFromCSV(state, matrix)
 	if err != nil {
 		return nil, err
@@ -145,6 +150,7 @@ func (p *parser) analyzeCSV(sf timeseries.SeriesFields,
 	out := &csvState{
 		seriesCounts:  sets.NewStringCounterSetCap(4),  // counts # series per-result
 		pointCounts:   sets.NewStringCounterSetCap(32), // counts # points per-series
+		pointsUsed:    sets.NewStringCounterSetCap(32), // holds the next point slice index per-series
 		seriesOrder:   make(seriesKeyDataCacheItems, 0, 32),
 		rowSeriesKeys: make(seriesKeyDataCacheItems, len(matrix)), // caches calculated series for each row
 	}
@@ -155,8 +161,8 @@ func (p *parser) analyzeCSV(sf timeseries.SeriesFields,
 		}
 		kd := getSeriesKeyData(row, sf)
 		out.rowSeriesKeys[i] = kd
-		_, ok := out.pointCounts.Increment(kd.s, 1)
-		if !ok { // if it's a new series, increment the result's series count
+		// if it's a new series, increment the result's series count
+		if _, _, ok := out.pointCounts.Increment(kd.s, 1); !ok {
 			out.seriesOrder = append(out.seriesOrder, kd)
 			out.seriesCounts.Increment(kd.resultID, 1)
 		}
@@ -183,7 +189,7 @@ func (p *parser) populateFromCSV(state *csvState, matrix [][]string) error {
 		p.addRowToSeries(state, row, s)
 	}
 	for _, s := range lkp {
-		if i, ok := state.pointCounts.Value(s.Header.Name); ok {
+		if i, ok := state.pointsUsed.Value(s.Header.Name); ok {
 			s.Points = s.Points[:i]
 		}
 	}
@@ -206,11 +212,11 @@ func (p *parser) addRowToSeries(state *csvState, row []string, s *dataset.Series
 		}
 		pt.Size += addValue(row[fd.OutputPosition], pt.Values, i, fd.DataType)
 	}
-	i, _ := state.pointCounts.Increment(s.Header.Name, 1)
+	i, _, _ := state.pointsUsed.Increment(s.Header.Name, 1)
 	if ps, ok := numbers.SafeAdd64(s.PointSize, int64(pt.Size)); ok {
 		s.PointSize = ps
 	}
-	s.Points[i-1] = pt
+	s.Points[i] = pt
 }
 
 func addValue(input string, vals []any, i int, t timeseries.FieldDataType) int {
@@ -287,30 +293,35 @@ func getSeriesKeyData(row []string, sf timeseries.SeriesFields) seriesKeyDataCac
 	}
 }
 
-func emptyDataSet(sf timeseries.SeriesFields, rc, sc sets.StringCounterSet,
+func emptyDataSet(sf timeseries.SeriesFields, sbr, pbc sets.StringCounterSet,
 	so seriesKeyDataCacheItems) *dataset.DataSet {
 	rsl := make(map[string]dataset.SeriesList, 16)
 	used := sets.NewStringCounterSetCap(len(so))
 	out := &dataset.DataSet{}
+	ro := make(dataset.Results, 0, 4) // usually 1 item, sometimes 2, rarely 3+
 	for _, kd := range so {
-		pc, ok := sc.Value(kd.s)
+		pc, ok := pbc.Value(kd.s)
 		if !ok || pc < 1 {
 			continue
 		}
-		j, _ := rc.Value(kd.resultID)
+		j, _ := sbr.Value(kd.resultID)
 		sl, ok := rsl[kd.resultID]
 		if !ok {
 			sl = make(dataset.SeriesList, j)
 			rsl[kd.resultID] = sl
+			ro = append(ro, &dataset.Result{
+				Name:       kd.resultID,
+				SeriesList: sl,
+			})
 		}
-		tm := kd.seriesKeyData.Map()
 		s := &dataset.Series{
 			Header: dataset.SeriesHeader{
-				Name:            kd.s,
-				TimestampField:  sf.Timestamp,
-				TagFieldsList:   sf.Tags,
-				ValueFieldsList: sf.Values,
-				Tags:            tm,
+				Name:                kd.s,
+				TimestampField:      sf.Timestamp,
+				TagFieldsList:       sf.Tags,
+				ValueFieldsList:     sf.Values,
+				UntrackedFieldsList: sf.Untracked,
+				Tags:                kd.seriesKeyData.Map(),
 			},
 			Points: make(dataset.Points, pc),
 		}
@@ -321,6 +332,7 @@ func emptyDataSet(sf timeseries.SeriesFields, rc, sc sets.StringCounterSet,
 		used.Increment(kd.resultID, 1)
 		sl[si] = s
 	}
+	out.Results = ro
 	return out
 }
 

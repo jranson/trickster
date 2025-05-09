@@ -50,9 +50,9 @@ type TimeRangeQuery struct {
 	// TimestampDefinition sets the definition for the Timestamp column in the in the timeseries based on the query
 	TimestampDefinition FieldDefinition `msg:"-"`
 	// TagFieldDefinitions contains the definitions for Tag columns in the timeseries, based on the query
-	TagFieldDefintions []FieldDefinition `msg:"-"`
+	TagFieldDefintions FieldDefinitions `msg:"-"`
 	// ValueFieldDefinitions contains the definitions for Value columns in the timeseries, based on the query
-	ValueFieldDefinitions []FieldDefinition `msg:"-"`
+	ValueFieldDefinitions FieldDefinitions `msg:"-"`
 	// ParsedQuery is a member for the vendor-specific query object
 	ParsedQuery any `msg:"-"`
 	// OriginalBody is the original inbound request body untransformed if POST
