@@ -169,6 +169,7 @@ func ParseTimeRangeQuery(r *http.Request,
 	trq.TemplateURL = urls.Clone(r.URL)
 	trq.Extent = extent
 	rlo.ProviderRequest = frb
+	trq.CacheKeyElements = map[string]string{"query": tokenizedStmt}
 	return trq, rlo, false, nil
 }
 
