@@ -35,6 +35,7 @@ import (
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging"
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging/level"
 	"github.com/trickstercache/trickster/v2/pkg/observability/logging/logger"
+	"github.com/trickstercache/trickster/v2/pkg/observability/pprof"
 	"github.com/trickstercache/trickster/v2/pkg/observability/tracing"
 	"github.com/trickstercache/trickster/v2/pkg/observability/tracing/exporters/zipkin"
 	to "github.com/trickstercache/trickster/v2/pkg/observability/tracing/options"
@@ -50,7 +51,7 @@ import (
 func TestRegisterPprofRoutes(t *testing.T) {
 	logger.SetLogger(logging.ConsoleLogger(level.Info))
 	router := lm.NewRouter()
-	RegisterPprofRoutes("test", router)
+	pprof.RegisterRoutes("test", router)
 	r, _ := http.NewRequest("GET", "http://0/debug/pprof", nil)
 	h := router.Handler(r)
 	if h == nil {
