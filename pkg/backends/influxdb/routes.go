@@ -23,6 +23,7 @@ import (
 	bo "github.com/trickstercache/trickster/v2/pkg/backends/options"
 	"github.com/trickstercache/trickster/v2/pkg/backends/providers"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/handlers"
+	"github.com/trickstercache/trickster/v2/pkg/proxy/methods"
 	"github.com/trickstercache/trickster/v2/pkg/proxy/paths/matching"
 	po "github.com/trickstercache/trickster/v2/pkg/proxy/paths/options"
 )
@@ -42,33 +43,31 @@ func (c *Client) RegisterHandlers(handlers.Lookup) {
 
 // DefaultPathConfigs returns the default PathConfigs for the given Provider
 func (c *Client) DefaultPathConfigs(_ *bo.Options) po.Lookup {
-
-	paths := po.Lookup{
-		"/" + mnQuery: {
+	return po.List{
+		{
 			Path:            "/" + mnQuery,
 			HandlerName:     mnQuery,
-			Methods:         []string{http.MethodGet, http.MethodPost},
+			Methods:         methods.GetAndPost(),
 			CacheKeyParams:  []string{influxql.ParamDB, influxql.ParamQuery, "u", "p"},
 			CacheKeyHeaders: []string{},
 			MatchTypeName:   "exact",
 			MatchType:       matching.PathMatchTypeExact,
 		},
-		"/" + apiv2Query: {
+		{
 			Path:            "/" + apiv2Query,
 			HandlerName:     mnQuery,
-			Methods:         []string{http.MethodGet, http.MethodPost},
+			Methods:         methods.GetAndPost(),
 			CacheKeyParams:  []string{influxql.ParamDB, influxql.ParamQuery, "u", "p"},
 			CacheKeyHeaders: []string{},
 			MatchTypeName:   "exact",
 			MatchType:       matching.PathMatchTypeExact,
 		},
-		"/": {
+		{
 			Path:          "/",
 			HandlerName:   providers.Proxy,
-			Methods:       []string{http.MethodGet, http.MethodPost},
+			Methods:       methods.GetAndPost(),
 			MatchType:     matching.PathMatchTypePrefix,
 			MatchTypeName: "prefix",
 		},
-	}
-	return paths
+	}.ToLookup()
 }
