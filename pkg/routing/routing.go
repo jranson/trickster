@@ -316,8 +316,8 @@ func RegisterPathRoutes(r router.Router, conf *config.Config, handlers handlers.
 }
 
 // RegisterDefaultBackendRoutes will iterate the Backends and register the default routes
-func RegisterDefaultBackendRoutes(r router.Router, conf *config.Config, bknds backends.Backends,
-	tracers tracing.Tracers) {
+func RegisterDefaultBackendRoutes(r router.Router, conf *config.Config,
+	bknds backends.Backends, tracers tracing.Tracers) {
 
 	applyMiddleware := func(o *bo.Options, po *po.Options, tr *tracing.Tracer,
 		c cache.Cache, client backends.Backend) http.Handler {
