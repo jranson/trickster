@@ -420,6 +420,11 @@ backends:
 #       # default is 3s
 #       timeout: 3s
 
+#       # interval is the frequency at which the automated health check polls are conducted for the backend
+#       # this should be equal or greater than the timeout value to avoid health check requests piling up
+#       # default is 0 (disabled)
+#       interval: 0
+
 #       # expected_codes is the list of acceptable HTTP response codes when health checking the backend
 #       # for considering the backend healthy
 #       # default is [ 200 ]
