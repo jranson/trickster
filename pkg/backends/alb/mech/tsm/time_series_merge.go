@@ -159,12 +159,10 @@ func (h *handler) SetPool(p pool.Pool) {
 // compute, then healthy on a later request, would have its injected labels
 // permanently excluded from the cached set until SetPool fired -- causing its
 // series to ship with un-stripped backend labels and split during dedup.
-// hl is the live-target snapshot for the current request. The pool's full
-// configured target list is not reachable through the public Pool interface;
-// the union-on-each-call design keeps the cache eventually consistent with
-// every target that has been healthy at least once, which is sufficient
-// because labels can only need stripping for targets whose responses have
-// reached the merge.
+// hl is the live-target snapshot for the current request. The union-on-each-call
+// design keeps the cache eventually consistent with every target that has been
+// healthy at least once, which is sufficient because labels can only need
+// stripping for targets whose responses have reached the merge.
 //
 // Concurrent calls may build divergent snapshots; atomic.Pointer.Store is
 // last-writer-wins, but every snapshot is a superset of previously-observed
@@ -343,8 +341,16 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// degraded: the merge has silently collapsed to one shard. Warn once per
 	// healthy->degraded transition (not per request) and route through the
 	// merge path so the warning reaches the response `warnings` field.
-	configured := p.ConfiguredLen()
-	degraded := configured > 1 && l == 1
+	configuredTargets := p.ConfiguredTargets()
+	topology := replicaTopology(hl, configuredTargets)
+	var liveGroups int
+	for _, group := range topology {
+		if len(group.live) > 0 {
+			liveGroups++
+		}
+	}
+	configuredGroups := len(topology)
+	degraded := liveGroups < configuredGroups
 	if degraded {
 		if h.degradeActive.CompareAndSwap(false, true) {
 			bn := ""
@@ -352,9 +358,14 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				bn = rsc.BackendOptions.Name
 			}
 			logger.Warn("alb tsm pool degraded to single live member",
-				logging.Pairs{"backend_name": bn, "configured": configured, "live": l})
+				logging.Pairs{
+					"backend_name":      bn,
+					"configured_groups": configuredGroups,
+					"live_groups":       liveGroups,
+				})
 		}
-		dw := fmt.Sprintf("trickster: served from 1 of %d pool members; results may be incomplete", configured)
+		dw := fmt.Sprintf("trickster: served from %d of %d pool members; results may be incomplete",
+			liveGroups, configuredGroups)
 		if warnMsg == "" {
 			warnMsg = dw
 		} else {
@@ -371,7 +382,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.servePlan(w, r, hl, rsc, plan, stripKeys, finalizer, warnMsg)
+	h.servePlan(w, r, hl, rsc, plan, stripKeys, finalizer, warnMsg,
+		configuredTargets)
 }
 
 // gatherResult captures the per-member fanout outcome used to assemble the
@@ -599,6 +611,7 @@ func (h *handler) serveStandard(
 	query string,
 	finalizer mergeFinalizer,
 	warnMsg string,
+	configured ...pool.Targets,
 ) {
 	l := len(hl)
 
@@ -673,7 +686,8 @@ func (h *handler) serveStandard(
 				header:     fr.Capture.Header(),
 				mergeFunc:  rsc2.MergeRespondFunc,
 				contrib:    contribution,
-				failed:     contribution == nil,
+				failed: contribution == nil || (sc != 0 &&
+					(sc < http.StatusOK || sc >= http.StatusMultipleChoices)),
 			}
 		},
 	})
@@ -688,10 +702,25 @@ func (h *handler) serveStandard(
 	}
 	contributions := make([]*gatherContribution, l)
 	for i := range results {
-		contributions[i] = results[i].contrib
+		if !results[i].failed {
+			contributions[i] = results[i].contrib
+		}
 	}
-	for _, member := range mergeGatherContributions(parentCtx, accumulator, contributions) {
-		results[member].failed = true
+	var configuredTargets pool.Targets
+	if len(configured) > 0 {
+		configuredTargets = configured[0]
+	}
+	logical := contributions
+	var groupWarnings []string
+	var groupFailure bool
+	if mergeStrategy != tsmerge.StrategyScalar {
+		logical, groupWarnings, groupFailure = coalesceReplicaContributions(
+			parentCtx, hl, configuredTargets, contributions, "", dedupToleranceNanos)
+	}
+	for _, member := range mergeGatherContributions(parentCtx, accumulator, logical) {
+		if member >= 0 && member < len(results) {
+			results[member].failed = true
+		}
 	}
 	if parentCtx.Err() != nil {
 		return
@@ -701,19 +730,18 @@ func (h *handler) serveStandard(
 	// parse error) where a member produced no contribution but no HTTP
 	// status reached this layer. Without this, the merged response would
 	// silently look identical to a fully-successful fanout.
-	var hasGatherFailure bool
-	for i, res := range results {
+	logicalResults := results
+	if mergeStrategy != tsmerge.StrategyScalar {
+		logicalResults = coalesceReplicaResults(hl, configuredTargets, results)
+	}
+	hasGatherFailure := groupFailure
+	for _, res := range logicalResults {
 		if res.failed {
 			hasGatherFailure = true
 			metrics.ALBFanoutFailures.WithLabelValues(names.MechanismTSM, "", "no_contribution").Inc()
-			if ts := accumulator.GetTSData(); ts != nil {
-				if ds, ok := ts.(*dataset.DataSet); ok {
-					ds.Warnings = append(ds.Warnings,
-						"trickster: tsm partial failure: pool member "+strconv.Itoa(i)+" returned no usable response")
-				}
-			}
 		}
 	}
+	appendPlanWarnings(accumulator, groupWarnings)
 
 	// For non-supportable aggregators, inject a warning into the Prometheus
 	// response so clients know the merged results may be inaccurate.
@@ -748,8 +776,8 @@ func (h *handler) serveStandard(
 	// member whose mergeFunc will write the final response. Without this,
 	// TSM fanout would strip any backend-set headers that FGR would
 	// happily propagate. See #970.
-	mrf, winnerHeaders := pickWinner(results)
-	statusCode, statusHeader, has2xx, hasNon2xx := aggregateStatus(results)
+	mrf, winnerHeaders := pickWinner(logicalResults)
+	statusCode, statusHeader, has2xx, hasNon2xx := aggregateStatus(logicalResults)
 	// Mixed 2xx + non-2xx fanout: surface a partial-hit marker so clients
 	// can detect that some members failed even when each member's own
 	// Trickster status string happens to agree (V2). hasGatherFailure
@@ -761,7 +789,7 @@ func (h *handler) serveStandard(
 	}
 
 	// preserve Set-Cookie from all members; headers.Merge below would otherwise collapse to winner only
-	mergeMultiValuedHeaders(w.Header(), results, winnerHeaders)
+	mergeMultiValuedHeaders(w.Header(), logicalResults, winnerHeaders)
 
 	// Carry the winner's custom headers onto the outbound response BEFORE
 	// setting the aggregated X-Trickster-Result. headers.Merge makes the

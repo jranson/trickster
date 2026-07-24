@@ -184,6 +184,11 @@ func (c *Client) ValidateAndStartPool(clients backends.Backends, hcs healthcheck
 		if !ok {
 			return alberr.NewErrInvalidPoolMemberName(c.Name(), n)
 		}
+		if o.MechanismName == names.MechanismTSM &&
+			!providers.IsSupportedTimeSeriesMergeProvider(tc.Configuration().Provider) {
+			return fmt.Errorf("%w: backend %q uses provider %q",
+				alberr.ErrInvalidTimeSeriesMergeProvider, n, tc.Configuration().Provider)
+		}
 		hc, ok := hcs[n]
 		if !ok {
 			// virtual backends (rule, alb) have no health checks; treat as passing

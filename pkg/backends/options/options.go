@@ -66,6 +66,10 @@ type Options struct {
 	Hosts []string `yaml:"hosts,omitempty"`
 	// Provider describes the type of backend (e.g., 'prometheus')
 	Provider string `yaml:"provider,omitempty"`
+	// ReplicaGroup identifies the logical data shard represented by this backend
+	// when it participates in a Time Series Merge pool.
+	// An empty value is initialized to the backend name.
+	ReplicaGroup string `yaml:"replica_group,omitempty"`
 	// ListenerName identifies the inbound listener that exposes this backend.
 	ListenerName string `yaml:"listener_name,omitempty"`
 	// OriginURL provides the base upstream URL for all proxied requests to this Backend.
@@ -591,6 +595,14 @@ func (l Lookup) Initialize() error {
 // any values that were set during YAML unmarshaling
 func (o *Options) Initialize(name string) error {
 	o.Name = name
+	o.ReplicaGroup = strings.TrimSpace(o.ReplicaGroup)
+	if !providers.IsSupportedTimeSeriesMergeProvider(o.Provider) &&
+		o.ReplicaGroup != "" && o.ReplicaGroup != name {
+		return errors.New("replica_group is only permitted on TSM-compatible backends")
+	}
+	if o.ReplicaGroup == "" {
+		o.ReplicaGroup = name
+	}
 	if o.ListenerName == "" {
 		o.ListenerName = listener.DefaultFrontendName
 	}
@@ -664,6 +676,12 @@ func (o *Options) Initialize(name string) error {
 // exposing credentials (by masking known credential fields with "*****")
 func (o *Options) CloneYAMLSafe() *Options {
 	co := o.Clone()
+	// The runtime default is the backend name, but exporting that implicit
+	// value is noisy and suggests replica_group is relevant to every provider.
+	// Preserve only operator-supplied groupings that differ from the name.
+	if co.ReplicaGroup == co.Name {
+		co.ReplicaGroup = ""
+	}
 	for _, w := range co.Paths {
 		w.Handler = nil
 		w.KeyHasher = nil

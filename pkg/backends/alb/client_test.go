@@ -183,6 +183,34 @@ func TestValidateAndStartPool(t *testing.T) {
 	}
 }
 
+func TestValidateAndStartTSMPoolRejectsIncompatibleProvider(t *testing.T) {
+	memberOptions := bo.New()
+	memberOptions.Provider = providers.ReverseProxyShort
+	memberOptions.OriginURL = "http://example.com"
+	member, err := backends.New("member", memberOptions, nil, http.NotFoundHandler(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	albOptions := bo.New()
+	albOptions.Provider = providers.ALB
+	albOptions.ALBOptions = ao.New()
+	albOptions.ALBOptions.MechanismName = names.MechanismTSM
+	albOptions.ALBOptions.Pool = []string{"member"}
+	base, err := backends.New("edge", albOptions, nil, http.NotFoundHandler(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &Client{Backend: base}
+
+	err = client.ValidateAndStartPool(backends.Backends{
+		"edge": client, "member": member,
+	}, healthcheck.StatusLookup{"member": &healthcheck.Status{}})
+	if !goerrors.Is(err, errors.ErrInvalidTimeSeriesMergeProvider) {
+		t.Fatalf("error = %v, want ErrInvalidTimeSeriesMergeProvider", err)
+	}
+}
+
 func TestNewClientCaptureDefaults(t *testing.T) {
 	o := bo.New()
 	o.MaxCaptureBytes = 123
