@@ -700,12 +700,7 @@ func (h *handler) serveStandard(
 			results[i].failed = true
 		}
 	}
-	contributions := make([]*gatherContribution, l)
-	for i := range results {
-		if !results[i].failed {
-			contributions[i] = results[i].contrib
-		}
-	}
+	contributions := usableGatherContributions(results)
 	var configuredTargets pool.Targets
 	if len(configured) > 0 {
 		configuredTargets = configured[0]
@@ -816,6 +811,29 @@ func (h *handler) serveStandard(
 		statusCode = http.StatusOK
 	}
 	mrf(w, r, accumulator, statusCode)
+}
+
+// usableGatherContributions excludes error envelopes when at least one member
+// produced usable 2xx data. If every member returned an error, retain their
+// parseable contributions so the backend responder can marshal an error body
+// instead of turning an empty accumulator into a 200 response.
+func usableGatherContributions(results []gatherResult) []*gatherContribution {
+	hasSuccess := false
+	for _, result := range results {
+		if !result.failed && result.contrib != nil &&
+			result.statusCode >= http.StatusOK &&
+			result.statusCode < http.StatusMultipleChoices {
+			hasSuccess = true
+			break
+		}
+	}
+	contributions := make([]*gatherContribution, len(results))
+	for i, result := range results {
+		if result.contrib != nil && (!result.failed || !hasSuccess) {
+			contributions[i] = result.contrib
+		}
+	}
+	return contributions
 }
 
 // mergeMultiValuedHeaders forwards Set-Cookie from the winning shard only
