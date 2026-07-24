@@ -210,4 +210,3 @@ func (d *Duration) UnmarshalYAML(unmarshal func(any) error) error {
 func (d Duration) MarshalYAML() (any, error) {
 	return time.Duration(d).String(), nil
 }
-
