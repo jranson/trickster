@@ -178,7 +178,9 @@ backends:
   # prom-alb-all scatter/gathers prom01a/b, prom02 and prom03 and merges their responses
   # for the caller. The merge strategy is automatically selected per-query based on the
   # outer PromQL aggregation operator. Injected labels are automatically stripped before
-  # merging so that series from different backends are combined correctly. Because prom01a and prom01b are in the same replica_group, their values are de-dupicated before being merged/reduced with prom02 and prom03.
+  # merging so that series from different backends are combined correctly. Because prom01a
+  # and prom01b are in the same replica_group, their values are de-duplicated before being
+  # merged/reduced with prom02 and prom03.
   prom-alb-all:
     provider: alb
     alb:
