@@ -97,6 +97,23 @@ func TestReplicaGroupCoalescingPrecedesCrossShardReduction(t *testing.T) {
 	}
 }
 
+func TestReplicaGroupTolerantDedupKeepsConfiguredFirst(t *testing.T) {
+	contributions := []*gatherContribution{
+		replicaContribution(0, map[int64]string{100: "primary"}),
+		replicaContribution(1, map[int64]string{103: "replica"}),
+	}
+
+	logical := coalesceReplicaGroup(contributions, 5)
+	ds := logical.data.(*dataset.DataSet)
+	points := ds.Results[0].SeriesList[0].Points
+	if len(points) != 1 {
+		t.Fatalf("points = %v, want one tolerant-deduped point", points)
+	}
+	if points[0].Epoch != epoch.Epoch(100) || points[0].Values[0] != "primary" {
+		t.Fatalf("point = %+v, want configured-first replica at epoch 100", points[0])
+	}
+}
+
 func TestReplicaTopologyDefaultsToDistinctMembers(t *testing.T) {
 	targets := pool.Targets{
 		replicaTarget("a", "a"),

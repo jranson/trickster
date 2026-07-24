@@ -187,13 +187,25 @@ func coalesceReplicaGroup(contributions []*gatherContribution,
 		}
 		dataSets = append(dataSets, ds)
 	}
-	base := dataSets[len(dataSets)-1].Clone().(*dataset.DataSet)
-	base.Status = dataSets[len(dataSets)-1].Status
-	base.ErrorType = dataSets[len(dataSets)-1].ErrorType
-	base.Warnings = append([]string(nil), dataSets[len(dataSets)-1].Warnings...)
-	for i := len(dataSets) - 2; i >= 0; i-- {
-		base.MergeWithStrategyTolerant(true, int(tsmerge.StrategyDedup),
-			toleranceNanos, dataSets[i])
+	var base *dataset.DataSet
+	if toleranceNanos > 0 {
+		// Tolerant dedup keeps the first point in each timestamp cluster, and
+		// dataset merging places existing points before incoming points. Start
+		// with the configured-first replica and merge the remaining replicas in
+		// pool order so that configured-first remains authoritative.
+		base = cloneReplicaDataSet(dataSets[0])
+		for i := 1; i < len(dataSets); i++ {
+			base.MergeWithStrategyTolerant(true, int(tsmerge.StrategyDedup),
+				toleranceNanos, dataSets[i])
+		}
+	} else {
+		// Exact-timestamp dedup is last-value-wins. Merge in reverse pool order
+		// so that the configured-first replica is applied last.
+		base = cloneReplicaDataSet(dataSets[len(dataSets)-1])
+		for i := len(dataSets) - 2; i >= 0; i-- {
+			base.MergeWithStrategyTolerant(true, int(tsmerge.StrategyDedup),
+				toleranceNanos, dataSets[i])
+		}
 	}
 	return &gatherContribution{
 		data:           base,
@@ -201,6 +213,14 @@ func coalesceReplicaGroup(contributions []*gatherContribution,
 		batchMergeFunc: first.batchMergeFunc,
 		member:         first.member,
 	}
+}
+
+func cloneReplicaDataSet(source *dataset.DataSet) *dataset.DataSet {
+	clone := source.Clone().(*dataset.DataSet)
+	clone.Status = source.Status
+	clone.ErrorType = source.ErrorType
+	clone.Warnings = append([]string(nil), source.Warnings...)
+	return clone
 }
 
 func coalesceReplicaResults(live, configured pool.Targets,
