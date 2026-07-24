@@ -337,10 +337,10 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		stripKeys = h.computeStripKeys(hl)
 	}
 
-	// A configured multi-member pool serving from a single live member is
-	// degraded: the merge has silently collapsed to one shard. Warn once per
-	// healthy->degraded transition (not per request) and route through the
-	// merge path so the warning reaches the response `warnings` field.
+	// A pool with fewer live replica groups than configured logical shards is
+	// degraded. Warn once per healthy->degraded transition (not per request)
+	// and route through the merge path so the warning reaches the response
+	// `warnings` field.
 	configuredTargets := p.ConfiguredTargets()
 	topology := replicaTopology(hl, configuredTargets)
 	var liveGroups int
@@ -357,14 +357,14 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if rsc.BackendOptions != nil {
 				bn = rsc.BackendOptions.Name
 			}
-			logger.Warn("alb tsm pool degraded to single live member",
+			logger.Warn("alb tsm pool has unavailable replica groups",
 				logging.Pairs{
 					"backend_name":      bn,
 					"configured_groups": configuredGroups,
 					"live_groups":       liveGroups,
 				})
 		}
-		dw := fmt.Sprintf("trickster: served from %d of %d pool members; results may be incomplete",
+		dw := fmt.Sprintf("trickster: served from %d of %d replica groups; results may be incomplete",
 			liveGroups, configuredGroups)
 		if warnMsg == "" {
 			warnMsg = dw
