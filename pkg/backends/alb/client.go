@@ -184,10 +184,10 @@ func (c *Client) ValidateAndStartPool(clients backends.Backends, hcs healthcheck
 		if !ok {
 			return alberr.NewErrInvalidPoolMemberName(c.Name(), n)
 		}
-		if o.MechanismName == names.MechanismTSM &&
-			!providers.IsSupportedTimeSeriesMergeProvider(tc.Configuration().Provider) {
-			return fmt.Errorf("%w: backend %q uses provider %q",
-				alberr.ErrInvalidTimeSeriesMergeProvider, n, tc.Configuration().Provider)
+		if o.MechanismName == names.MechanismTSM {
+			if err := validateTSMPoolMemberProvider(n, clients, sets.NewStringSet()); err != nil {
+				return err
+			}
 		}
 		hc, ok := hcs[n]
 		if !ok {
@@ -234,6 +234,40 @@ func (c *Client) ValidateAndStartPool(clients backends.Backends, hcs healthcheck
 			})
 	} else {
 		metrics.ALBPoolAdmitsFailing.WithLabelValues(c.Name()).Set(0)
+	}
+	return nil
+}
+
+// validateTSMPoolMemberProvider resolves virtual ALB members to their terminal
+// pool leaves. A nested ALB is compatible with TSM when every leaf produces a
+// supported time-series format; checking only the immediate provider would
+// incorrectly reject topologies such as TSM -> round-robin ALB -> Prometheus.
+func validateTSMPoolMemberProvider(name string, clients backends.Backends,
+	visited sets.Set[string],
+) error {
+	if visited.Contains(name) {
+		return fmt.Errorf("%w: cycle encountered at backend %q",
+			alberr.ErrInvalidTimeSeriesMergeProvider, name)
+	}
+	client, ok := clients[name]
+	if !ok || client == nil || client.Configuration() == nil {
+		return alberr.NewErrInvalidPoolMemberName("", name)
+	}
+	cfg := client.Configuration()
+	if providers.IsSupportedTimeSeriesMergeProvider(cfg.Provider) {
+		return nil
+	}
+	if cfg.Provider != providers.ALB || cfg.ALBOptions == nil ||
+		len(cfg.ALBOptions.Pool) == 0 {
+		return fmt.Errorf("%w: backend %q uses provider %q",
+			alberr.ErrInvalidTimeSeriesMergeProvider, name, cfg.Provider)
+	}
+	nextVisited := visited.Clone()
+	nextVisited.Set(name)
+	for _, child := range cfg.ALBOptions.Pool {
+		if err := validateTSMPoolMemberProvider(child, clients, nextVisited); err != nil {
+			return err
+		}
 	}
 	return nil
 }

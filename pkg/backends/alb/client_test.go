@@ -211,6 +211,31 @@ func TestValidateAndStartTSMPoolRejectsIncompatibleProvider(t *testing.T) {
 	}
 }
 
+func TestValidateTSMPoolMemberProviderResolvesNestedALB(t *testing.T) {
+	leafOptions := bo.New()
+	leafOptions.Provider = providers.Prometheus
+	leafOptions.OriginURL = "http://example.com"
+	leaf, err := backends.New("leaf", leafOptions, nil, http.NotFoundHandler(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	innerOptions := bo.New()
+	innerOptions.Provider = providers.ALB
+	innerOptions.ALBOptions = ao.New()
+	innerOptions.ALBOptions.MechanismName = names.MechanismRR
+	innerOptions.ALBOptions.Pool = []string{"leaf"}
+	inner, err := backends.New("inner", innerOptions, nil, http.NotFoundHandler(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clients := backends.Backends{"inner": inner, "leaf": leaf}
+	if err := validateTSMPoolMemberProvider("inner", clients, sets.NewStringSet()); err != nil {
+		t.Fatalf("nested Prometheus ALB rejected: %v", err)
+	}
+}
+
 func TestNewClientCaptureDefaults(t *testing.T) {
 	o := bo.New()
 	o.MaxCaptureBytes = 123
