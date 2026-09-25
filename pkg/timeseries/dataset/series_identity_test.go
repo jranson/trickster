@@ -111,6 +111,16 @@ func TestMergesKeepCollidingSeriesApart(t *testing.T) {
 		MergeOpts{SortPoints: true})
 	require.Equal(t, map[string][]epoch.Epoch{"a": {1, 2}, "b": {1, 5}, "c": {3}, "d": {6}},
 		epochsByHost(out))
+
+	// nil series are skipped, and an empty receiver starts from the first member
+	var empty SeriesList
+	out = empty.mergeCollection([]SeriesList{{collidingSeries("a", 1), nil}, {nil, collidingSeries("b", 2)}},
+		MergeOpts{SortPoints: true})
+	require.Equal(t, map[string][]epoch.Epoch{"a": {1}, "b": {2}}, epochsByHost(out))
+	out = SeriesList{nil, collidingSeries("a", 1)}.mergeCollection(
+		[]SeriesList{{collidingSeries("a", 2)}, {collidingSeries("b", 3)}}, MergeOpts{SortPoints: true})
+	require.Equal(t, map[string][]epoch.Epoch{"a": {1, 2}, "b": {3}}, epochsByHost(out))
+	require.Empty(t, empty.mergeCollection([]SeriesList{{}, nil}, MergeOpts{}))
 }
 
 func TestDataSetMergeKeepsCollidingSeries(t *testing.T) {

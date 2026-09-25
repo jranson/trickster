@@ -101,7 +101,7 @@ Rows committed while a series is open go to that series and may not set tags. `S
 
 ### Finishing
 
-The DataSet never holds two series that a later merge would treat as one, because the Builder matches series on the same header attributes the merge code hashes. It also compares the headers themselves, so two different series whose hashes collide stay separate.
+The Builder matches series the same way merges do: the header hash finds candidates, and a comparison of the headers confirms the match. So the DataSet never holds two series that a later merge would treat as one, and two different series whose hashes collide stay separate, both in the Builder and in later merges.
 
 `Finish` returns the DataSet. It sorts only the series whose points arrived out of order, using a stable sort that keeps arrival order among equal epochs, and then applies the duplicate policy. When a series' points do arrive in order, duplicates are handled as they arrive, so `DuplicatesError` fails the `Commit` immediately. `Finish` also calculates each series header's size, and sets the DataSet's `TimeRangeQuery` and `ExtentList` from the query.
 

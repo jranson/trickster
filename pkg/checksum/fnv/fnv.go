@@ -48,7 +48,7 @@ func (s *InlineFNV64a) Write(data []byte) (int, error) {
 // WriteString adds the bytes of str to the running hash without converting it to a []byte.
 func (s *InlineFNV64a) WriteString(str string) (int, error) {
 	hash := uint64(*s)
-	for i := 0; i < len(str); i++ {
+	for i := range len(str) {
 		hash ^= uint64(str[i])
 		hash *= prime64
 	}
