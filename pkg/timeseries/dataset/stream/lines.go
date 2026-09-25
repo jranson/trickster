@@ -79,8 +79,7 @@ func (l *Lines) Write(p []byte) (int, error) {
 	for len(rest) > 0 {
 		i := bytes.IndexByte(rest, '\n')
 		if i < 0 {
-			// one extra byte leaves room for a "\r" whose "\n" has not arrived
-			if len(l.partial)+len(rest) > l.max+1 {
+			if !l.fits(rest) {
 				return len(p) - len(rest), l.fail(ErrLineTooLong)
 			}
 			l.partial = append(l.partial, rest...)
@@ -88,6 +87,10 @@ func (l *Lines) Write(p []byte) (int, error) {
 		}
 		line := rest[:i]
 		if len(l.partial) > 0 {
+			// check before joining, so an overlong line never grows the partial buffer
+			if !l.fits(line) {
+				return len(p) - len(rest), l.fail(ErrLineTooLong)
+			}
 			l.partial = append(l.partial, line...)
 			line = l.partial
 		}
@@ -165,6 +168,22 @@ func (l *Lines) fail(err error) error {
 		l.err = err
 	}
 	return l.err
+}
+
+func (l *Lines) fits(next []byte) bool {
+	// the partial line plus next, less a trailing "\r" whose "\n" may follow
+	n := len(l.partial) + len(next)
+	var last byte
+	switch {
+	case len(next) > 0:
+		last = next[len(next)-1]
+	case len(l.partial) > 0:
+		last = l.partial[len(l.partial)-1]
+	}
+	if last == '\r' {
+		n--
+	}
+	return n <= l.max
 }
 
 func (l *Lines) emit(raw []byte) error {

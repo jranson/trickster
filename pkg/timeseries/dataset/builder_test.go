@@ -492,3 +492,93 @@ func BenchmarkBuilderRows(b *testing.B) {
 		}
 	}
 }
+
+func TestBuilderEquivalentTagsShareSeries(t *testing.T) {
+	b := NewBuilder(nil, BuilderOptions{
+		Fields:    testBuilderFields(),
+		TagString: func(_ timeseries.FieldDefinition, raw []byte) string { return strings.ToLower(string(raw)) },
+	})
+	commitRows(t, b,
+		testRow{e: 1, host: "a", dc: "x", v: 1.0},
+		testRow{e: 2, host: "A", dc: "X", v: 2.0},
+		testRow{e: 3, host: "A", dc: "X", v: 3.0},
+		testRow{e: 1, host: "b", dc: "x", v: 4.0},
+	)
+	// the second spelling is remembered, so its later rows skip the conversion
+	require.Len(t, b.results[0].lookup, 3)
+	ds, err := b.Finish()
+	require.NoError(t, err)
+	sl := ds.Results[0].SeriesList
+	require.Len(t, sl, 2)
+	require.Equal(t, Tags{"host": "a", "dc": "x"}, sl[0].Header.Tags)
+	require.Equal(t, []any{1.0, 2.0, 3.0}, pointValues(sl[0]))
+	requireSizes(t, sl[0])
+	require.Equal(t, []any{4.0}, pointValues(sl[1]))
+}
+
+func TestBuilderDuplicateTagNamesShareSeries(t *testing.T) {
+	fields := testBuilderFields()
+	fields.Tags[1].Name = fields.Tags[0].Name
+	b := NewBuilder(nil, BuilderOptions{Fields: fields})
+	commitRows(t, b,
+		testRow{e: 1, host: "a", dc: "x", v: 1.0},
+		testRow{e: 2, host: "b", dc: "x", v: 2.0},
+	)
+	ds, err := b.Finish()
+	require.NoError(t, err)
+	sl := ds.Results[0].SeriesList
+	require.Len(t, sl, 1)
+	require.Equal(t, Tags{"host": "x"}, sl[0].Header.Tags)
+	require.Equal(t, []epoch.Epoch{1, 2}, pointEpochs(sl[0]))
+}
+
+func TestBuilderStartSeriesReopensIdenticalHeader(t *testing.T) {
+	value := timeseries.FieldDefinition{Name: "v", DataType: timeseries.String}
+	h := SeriesHeader{Name: "up", Tags: Tags{"job": "a"}, ValueFieldsList: timeseries.FieldDefinitions{value}}
+	b := NewBuilder(nil, BuilderOptions{})
+	b.StartSeries(h)
+	require.NoError(t, b.AppendPoint(Point{Epoch: 2, Values: []any{"2"}}))
+	b.StartSeries(SeriesHeader{Name: "up", Tags: Tags{"job": "b"}, ValueFieldsList: h.ValueFieldsList})
+	require.NoError(t, b.AppendPoint(Point{Epoch: 1, Values: []any{"1"}}))
+	// attributes outside the header's identity, such as output positions, do not split a series
+	moved := value
+	moved.OutputPosition = 3
+	b.StartSeries(SeriesHeader{Name: "up", Tags: Tags{"job": "a"}, ValueFieldsList: timeseries.FieldDefinitions{moved}})
+	require.NoError(t, b.AppendPoint(Point{Epoch: 1, Values: []any{"1"}}))
+	ds, err := b.Finish()
+	require.NoError(t, err)
+	sl := ds.Results[0].SeriesList
+	require.Len(t, sl, 2)
+	require.Equal(t, []epoch.Epoch{1, 2}, pointEpochs(sl[0]))
+	require.Zero(t, sl[0].Header.ValueFieldsList[0].OutputPosition)
+	require.Equal(t, []epoch.Epoch{1}, pointEpochs(sl[1]))
+}
+
+func TestSameSeries(t *testing.T) {
+	fd := timeseries.FieldDefinition{Name: "v", DataType: timeseries.Float64}
+	base := func() SeriesHeader {
+		return SeriesHeader{
+			Name: "n", QueryStatement: "q", Tags: Tags{"k": "v"}, TimestampField: fd,
+			ValueFieldsList: timeseries.FieldDefinitions{fd}, UntrackedFieldsList: timeseries.FieldDefinitions{fd},
+		}
+	}
+	a := base()
+	b := base()
+	require.True(t, sameSeries(&a, &b))
+	b.TagFieldsList = timeseries.FieldDefinitions{fd}
+	b.Size = 9
+	require.True(t, sameSeries(&a, &b))
+	for name, mutate := range map[string]func(*SeriesHeader){
+		"name":      func(h *SeriesHeader) { h.Name = "x" },
+		"query":     func(h *SeriesHeader) { h.QueryStatement = "x" },
+		"tags":      func(h *SeriesHeader) { h.Tags = Tags{"k": "x"} },
+		"timestamp": func(h *SeriesHeader) { h.TimestampField.DataType = timeseries.Int64 },
+		"values":    func(h *SeriesHeader) { h.ValueFieldsList = nil },
+		"value":     func(h *SeriesHeader) { h.ValueFieldsList[0].Name = "x" },
+		"untracked": func(h *SeriesHeader) { h.UntrackedFieldsList = nil },
+	} {
+		b := base()
+		mutate(&b)
+		require.False(t, sameSeries(&a, &b), name)
+	}
+}

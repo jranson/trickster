@@ -206,3 +206,93 @@ func TestJSONTagString(t *testing.T) {
 	require.Equal(t, `"\x"`, JSONTagString(fd, []byte(`"\x"`)))
 	require.Equal(t, `"`, JSONTagString(fd, []byte(`"`)))
 }
+
+type windowReader struct {
+	r    io.Reader
+	dec  *json.Decoder
+	read int64
+	peak int64
+}
+
+func (w *windowReader) Read(p []byte) (int, error) {
+	// bytes read but not yet consumed are what the decoder is holding
+	if w.dec != nil {
+		w.peak = max(w.peak, w.read-w.dec.InputOffset())
+	}
+	n, err := w.r.Read(p[:min(len(p), 512)])
+	w.read += int64(n)
+	return n, err
+}
+
+func skipPeak(t *testing.T, body string, skip func(*json.Decoder) error) int64 {
+	t.Helper()
+	w := &windowReader{r: strings.NewReader(body)}
+	var sum int64
+	walk := func(dec *json.Decoder) error {
+		w.dec = dec
+		return Object(dec, func(key string) error {
+			if key != "n" {
+				return skip(dec)
+			}
+			return Array(dec, func() error {
+				var n int64
+				err := dec.Decode(&n)
+				sum += n
+				return err
+			})
+		})
+	}
+	_, err := NewJSON(walk, finishEmpty).ReadFrom(w)
+	require.NoError(t, err)
+	require.Equal(t, int64(3), sum)
+	return w.peak
+}
+
+func TestSkipDoesNotHoldValue(t *testing.T) {
+	var sb strings.Builder
+	sb.WriteString(`{"skip":[`)
+	for i := range 50000 {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+		sb.WriteString(`{"k":"value","n":[1,2,3]}`)
+	}
+	sb.WriteString(`],"n":[1,2]}`)
+	body := sb.String()
+	require.Less(t, skipPeak(t, body, Skip), int64(64<<10))
+	// decoding the value whole holds nearly all of it, which shows the measurement works
+	whole := func(dec *json.Decoder) error { return dec.Decode(new(json.RawMessage)) }
+	require.Greater(t, skipPeak(t, body, whole), int64(len(body)/2))
+}
+
+func TestSkip(t *testing.T) {
+	tests := []struct {
+		body string
+		err  error
+	}{
+		{`"str"`, nil},
+		{`12.5`, nil},
+		{`null`, nil},
+		{`{"a":{"b":[1,{"c":null}]},"d":"e"}`, nil},
+		{`[[],{},[[{}]]]`, nil},
+		{`[1,[2`, io.ErrUnexpectedEOF},
+	}
+	for _, test := range tests {
+		j := NewJSON(Skip, finishEmpty)
+		_, err := j.ReadFrom(strings.NewReader(test.body))
+		if test.err == nil {
+			require.NoError(t, err, test.body)
+			continue
+		}
+		require.Error(t, err, test.body)
+	}
+	// with no value left to skip, Skip meets the closing delimiter instead
+	closing := func(dec *json.Decoder) error {
+		if _, err := dec.Token(); err != nil {
+			return err
+		}
+		return Skip(dec)
+	}
+	_, err := NewJSON(closing, finishEmpty).ReadFrom(strings.NewReader(`[]`))
+	require.ErrorIs(t, err, ErrUnexpectedToken)
+}

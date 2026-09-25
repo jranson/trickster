@@ -61,8 +61,8 @@ type BuilderOptions struct {
 	Duplicates DuplicatePolicy
 	// SortSeries sorts each result's series by their tags when the build finishes.
 	SortSeries bool
-	// TagString converts a raw tag value to its Tags entry; raw is only valid
-	// during the call. When nil, the raw bytes are used as-is.
+	// TagString converts a raw tag value, valid only during the call, to its Tags entry;
+	// rows whose converted tags match share a series. When nil, raw bytes are used as-is.
 	TagString func(fd timeseries.FieldDefinition, raw []byte) string
 }
 
@@ -97,6 +97,7 @@ type resultBuild struct {
 	r      *Result
 	series []*seriesBuild
 	lookup map[string]*seriesBuild
+	index  *seriesIndex[*seriesBuild]
 }
 
 type seriesBuild struct {
@@ -137,22 +138,18 @@ func (b *Builder) SetResult(statementID int, name string) {
 	b.result = &resultBuild{
 		r:      &Result{StatementID: statementID, Name: name, SeriesList: SeriesList{}},
 		lookup: make(map[string]*seriesBuild),
+		index:  newSeriesIndex(0, builtHeader),
 	}
 	b.results = append(b.results, b.result)
 }
 
-// StartSeries switches the Builder to series mode: rows and points go to a new
-// series with the provided header until EndSeries or the next StartSeries.
+// StartSeries switches the Builder to series mode: rows and points go to the series
+// with an identical header, created if needed, until EndSeries or the next StartSeries.
 func (b *Builder) StartSeries(h SeriesHeader) {
 	if b.finished {
 		return
 	}
-	rb := b.currentResult()
-	b.current = &seriesBuild{
-		s:        &Series{Header: h},
-		expected: len(h.ValueFieldsList),
-	}
-	rb.series = append(rb.series, b.current)
+	b.current = b.seriesFor(b.currentResult(), h, false)
 }
 
 // EndSeries returns the Builder to row mode, where rows are grouped into series by their tags.
@@ -337,20 +334,39 @@ func (r *RowBuilder) series() *seriesBuild {
 			tags[fd.Name] = string(raw)
 		}
 	}
-	sb := &seriesBuild{
-		s: &Series{Header: SeriesHeader{
-			Name:                opts.SeriesName,
-			Tags:                tags,
-			TimestampField:      opts.Fields.Timestamp,
-			TagFieldsList:       slices.Clone(opts.Fields.Tags),
-			ValueFieldsList:     slices.Clone(opts.Fields.Values),
-			UntrackedFieldsList: slices.Clone(opts.Fields.Untracked),
-			QueryStatement:      opts.QueryStatement,
-		}},
-	}
+	// a new raw encoding can still name an existing series, as "a" and "\u0061" do in JSON
+	sb := r.b.seriesFor(rb, SeriesHeader{
+		Name:                opts.SeriesName,
+		Tags:                tags,
+		TimestampField:      opts.Fields.Timestamp,
+		TagFieldsList:       opts.Fields.Tags,
+		ValueFieldsList:     opts.Fields.Values,
+		UntrackedFieldsList: opts.Fields.Untracked,
+		QueryStatement:      opts.QueryStatement,
+	}, true)
 	rb.lookup[string(r.key)] = sb
+	return sb
+}
+
+func (b *Builder) seriesFor(rb *resultBuild, h SeriesHeader, cloneFields bool) *seriesBuild {
+	// series are matched the way merges match them, so no two can later merge as one
+	hash := h.CalculateHashWithQueryStatement(h.QueryStatement)
+	if sb, ok := rb.index.find(hash, &h); ok {
+		return sb
+	}
+	if cloneFields {
+		h.TagFieldsList = slices.Clone(h.TagFieldsList)
+		h.ValueFieldsList = slices.Clone(h.ValueFieldsList)
+		h.UntrackedFieldsList = slices.Clone(h.UntrackedFieldsList)
+	}
+	sb := &seriesBuild{s: &Series{Header: h}, expected: len(h.ValueFieldsList)}
+	rb.index.add(hash, sb)
 	rb.series = append(rb.series, sb)
 	return sb
+}
+
+func builtHeader(sb *seriesBuild) *SeriesHeader {
+	return &sb.s.Header
 }
 
 func (b *Builder) currentResult() *resultBuild {

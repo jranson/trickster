@@ -82,8 +82,8 @@ func TestLinesMaxLineBytes(t *testing.T) {
 	require.NoError(t, err)
 	_, err = l.Write([]byte("\nab"))
 	require.NoError(t, err)
-	// a partial line may hold one byte past the limit for a pending "\r"
-	n, err := l.Write([]byte("cde"))
+	// only a trailing "\r" may take a partial line past the limit
+	n, err := l.Write([]byte("cd"))
 	require.ErrorIs(t, err, ErrLineTooLong)
 	require.ErrorIs(t, err, timeseries.ErrInvalidBody)
 	require.Zero(t, n)
@@ -99,6 +99,30 @@ func TestLinesMaxLineBytes(t *testing.T) {
 	require.Equal(t, 3, n)
 
 	require.Equal(t, DefaultMaxLineBytes, NewLines(nil, nil).SetMaxLineBytes(0).max)
+}
+
+func TestLinesLimitPrecedesGrowth(t *testing.T) {
+	var got []string
+	l := NewLines(collectLines(&got), finishEmpty).SetMaxLineBytes(8)
+	_, err := l.Write([]byte("abc"))
+	require.NoError(t, err)
+	huge := append(bytes.Repeat([]byte{'x'}, 1<<20), '\n')
+	n, err := l.Write(huge)
+	require.ErrorIs(t, err, ErrLineTooLong)
+	require.Zero(t, n)
+	require.Less(t, cap(l.partial), 1<<10)
+
+	// a "\r" held from one write still ends the line when its "\n" arrives
+	l = NewLines(collectLines(&got), finishEmpty).SetMaxLineBytes(3)
+	for _, chunk := range []string{"ab", "c\r", "\n"} {
+		_, err = l.Write([]byte(chunk))
+		require.NoError(t, err)
+	}
+	_, err = l.Write([]byte("ab"))
+	require.NoError(t, err)
+	_, err = l.Write([]byte("cd\n"))
+	require.ErrorIs(t, err, ErrLineTooLong)
+	require.Equal(t, []string{"abc"}, got)
 }
 
 func TestLinesCallbackError(t *testing.T) {

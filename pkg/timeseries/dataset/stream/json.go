@@ -195,13 +195,28 @@ func Array(dec *json.Decoder, fn func() error) error {
 	return closeDelim(dec, ']')
 }
 
-type skipValue struct{}
-
-func (*skipValue) UnmarshalJSON([]byte) error { return nil }
-
-// Skip consumes and discards the next JSON value from dec.
+// Skip consumes and discards the next JSON value from dec one token at a time, so a
+// large skipped value is never held in memory. It fails if no value comes next.
 func Skip(dec *json.Decoder) error {
-	return dec.Decode(&skipValue{})
+	var depth int
+	for {
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		switch tok {
+		case json.Delim('['), json.Delim('{'):
+			depth++
+		case json.Delim(']'), json.Delim('}'):
+			depth--
+		}
+		switch {
+		case depth < 0:
+			return ErrUnexpectedToken
+		case depth == 0:
+			return nil
+		}
+	}
 }
 
 func open(dec *json.Decoder, want json.Delim) error {

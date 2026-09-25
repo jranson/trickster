@@ -32,7 +32,7 @@ Today the proxy engine reads each upstream body into memory before calling the u
 
 ### Newline-Delimited Formats
 
-`stream.NewLines(onLine, finish)` handles formats with one record per line, such as TSV, CSV without quoted newlines, and JSON Lines. It calls `onLine` for each line without its `\n` or `\r\n` terminator, even when the line was split across `Write` calls, and delivers a final unterminated line during `Finish`. The line is only valid during the call. Lines longer than 16 MiB fail with `ErrLineTooLong`; `SetMaxLineBytes` changes the limit.
+`stream.NewLines(onLine, finish)` handles formats with one record per line, such as TSV, CSV without quoted newlines, and JSON Lines. It calls `onLine` for each line without its `\n` or `\r\n` terminator, even when the line was split across `Write` calls, and delivers a final unterminated line during `Finish`. The line is only valid during the call. Lines longer than 16 MiB fail with `ErrLineTooLong` before they are buffered, so an overlong line cannot grow memory; `SetMaxLineBytes` changes the limit.
 
 `stream.SplitFields(line, sep, dst)` splits a line into fields without allocating, reusing `dst`. It does not interpret quotes or escapes, so unescape fields yourself where the format requires it.
 
@@ -42,7 +42,7 @@ Today the proxy engine reads each upstream body into memory before calling the u
 
 - `stream.Object(dec, func(key string) error)` calls the function for each key, in the order the keys arrive.
 - `stream.Array(dec, func() error)` calls the function once for each element.
-- `stream.Skip(dec)` consumes and discards the next value.
+- `stream.Skip(dec)` consumes and discards the next value a token at a time, so a large skipped value is never held in memory.
 
 Each callback must consume the value it was called for, for example with `dec.Decode`, a nested `Object` or `Array`, or `Skip`. A callback that returns without doing so fails with `ErrValueNotConsumed`. `Object` and `Array` return `ErrNull` for a JSON `null` after consuming it, so a caller that accepts a null can check with `errors.Is` and carry on. They return `ErrUnexpectedToken` when the value is the wrong kind.
 
@@ -78,7 +78,7 @@ if err := r.Commit(); err != nil {
 }
 ```
 
-The Builder groups rows into series by their raw tag bytes. Finding an existing series does not allocate, and a new series gets its `Tags` map and header only when it first appears. A tag that is never set is left out of the series' `Tags`, so an unset tag and an empty one produce different series.
+The Builder remembers each raw tag encoding it has seen, so a row that repeats an earlier row's tag bytes finds its series with one lookup that does not allocate. A new encoding is converted with `TagString` and matched against the existing series by header, so equivalent encodings, such as `"a"` and `"\u0061"` in JSON, share a series. A tag that is never set is left out of the series' `Tags`, so an unset tag and an empty one produce different series.
 
 ### Series Mode
 
@@ -97,9 +97,11 @@ for _, p := range points {
 b.EndSeries()
 ```
 
-Rows committed while a series is open go to that series and may not set tags. `AppendPoint` adds a `Point` you have already built. For formats that return several statements, `SetResult(statementID, name)` sends later rows and series to another result, creating it if needed.
+Rows committed while a series is open go to that series and may not set tags. `StartSeries` reopens the series with an identical header if there is one, so a series that arrives in pieces becomes one series. `AppendPoint` adds a `Point` you have already built. For formats that return several statements, `SetResult(statementID, name)` sends later rows and series to another result, creating it if needed.
 
 ### Finishing
+
+The DataSet never holds two series that a later merge would treat as one, because the Builder matches series on the same header attributes the merge code hashes. It also compares the headers themselves, so two different series whose hashes collide stay separate.
 
 `Finish` returns the DataSet. It sorts only the series whose points arrived out of order, using a stable sort that keeps arrival order among equal epochs, and then applies the duplicate policy. When a series' points do arrive in order, duplicates are handled as they arrive, so `DuplicatesError` fails the `Commit` immediately. `Finish` also calculates each series header's size, and sets the DataSet's `TimeRangeQuery` and `ExtentList` from the query.
 

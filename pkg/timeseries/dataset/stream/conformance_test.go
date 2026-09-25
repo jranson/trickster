@@ -197,10 +197,11 @@ func legacyRows(r io.Reader, trq *timeseries.TimeRangeQuery) (timeseries.Timeser
 }
 
 func TestRowsConformance(t *testing.T) {
-	body := `{"rows":[[2000,"b",1],[1000,"a",null],[1000,"b","2.5"],[3000,"c\"d",-4e-1]],
-		"total":4,"extra":{"x":[1,2,{"y":null}]}}`
+	// "\u0061" spells the same tag value as "a", so both rows belong to one series
+	body := `{"rows":[[2000,"b",1],[1000,"a",null],[1000,"b","2.5"],[3000,"c\"d",-4e-1],[4000,"\u0061",5]],
+		"total":5,"extra":{"x":[1,2,{"y":null}]}}`
 	want := wantDataSet(
-		wantSeries("rows", dataset.Tags{"host": "a"}, rowFields, pt(1000, nil)),
+		wantSeries("rows", dataset.Tags{"host": "a"}, rowFields, pt(1000, nil), pt(4000, 5.0)),
 		wantSeries("rows", dataset.Tags{"host": "b"}, rowFields, pt(1000, 2.5), pt(2000, 1.0)),
 		wantSeries("rows", dataset.Tags{"host": `c"d`}, rowFields, pt(3000, -0.4)),
 	)
